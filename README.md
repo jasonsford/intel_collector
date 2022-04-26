@@ -4,18 +4,18 @@ intel_collector is a Python library to query various sources of threat intellige
 for data on domains, files hashes, and IP addresses. Responses that do not return
 empty results are reformatted as comma separated values and written to CSV.
 
-CrowdStrike Falcon and Microsoft Defender for Endpoint customers can also query
+CrowdStrike Falcon Intel and Microsoft Defender for Endpoint customers can also query
 their tenant for the presence of indicators within their own environment.
 
 ## Supported APIs
 
-CrowdStrike (api.crowdstrike.com)
-Emerging Threats Intelligence (api.emergingthreats.net)
-GreyNoise Community API (api.greynoise.io)
-Microsoft Defender for Endpoint (api.securitycenter.windows.com)
-Onyphe Free Tier (www.onyphe.io)
-Shodan (shodan.io)
-VirusTotal Free Tier (www.virustotal.com)
+CrowdStrike Falcon Intel (api.crowdstrike.com)
+<br>Emerging Threats Intelligence (api.emergingthreats.net)
+<br>GreyNoise Community API (api.greynoise.io)
+<br>Microsoft Defender for Endpoint (api.securitycenter.windows.com)
+<br>Onyphe Free Tier (onyphe.io)
+<br>Shodan (shodan.io)
+<br>VirusTotal Free Tier (virustotal.com)
 
 ## Setting API keys
 
@@ -38,10 +38,10 @@ self.msft_client_secret = 'your M365 client secret'
 # Onyphe
 self.onyphe_api_key = 'apikey your onyphe api key'
 
-#Shodan
+# Shodan
 self.shodan_api_key = 'your shodan api key'
 
-#VirusTotal
+# VirusTotal
 self.virustotal_api_key = 'your virustotal api key'
 ```
 
@@ -106,21 +106,26 @@ go.find_hash('177f3c8a2623d4efb41b0020d680be83')
 ## Sample Output
  ```python   
 go.find_domain('bkdata.vn')
-
+```
+```bash
     bkdata.vn found in Onyphe - Summary
     bkdata.vn found in Shodan
     bkdata.vn found in VirusTotal - Resolutions
     Results written to bkdata.vn_20220425_124237.csv
-
+```
+```python
 go.find_hash('870c31aa344b2950d0ea4849a472dafed312ecee8aa212c47bf543668bbee8e9')
-
+```
+```bash
     870c31aa344b2950d0ea4849a472dafed312ecee8aa212c47bf543668bbee8e9 response from Microsoft Defender - Global File Info
     870c31aa344b2950d0ea4849a472dafed312ecee8aa212c47bf543668bbee8e9 response from VirusTotal - File Report
     870c31aa344b2950d0ea4849a472dafed312ecee8aa212c47bf543668bbee8e9 response from VirusTotal - File Behavior Reports
     Results written to 870c31aa344b2950d0ea4849a472dafed312ecee8aa212c47bf543668bbee8e9_20220426_123337.csv
-
+```
+```python
 go.find_ip('103.161.17.242')
-
+```
+```bash
     103.161.17.242 found in ET Intel - Events
     103.161.17.242 response from GreyNoise
     103.161.17.242 found in Onyphe - Summary
