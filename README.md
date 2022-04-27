@@ -101,7 +101,7 @@ go.find_hash('177f3c8a2623d4efb41b0020d680be83')
 - The Crowdstrike Falcon API for custom IOCs supports the following indicator types (sha256, md5)
 - The ET Intel API supports the (md5) indicator type
 - The Microsoft Defender for Endpoint API supports the following indicator types (sha1, sha256)
-- The VirusTotal API supports the following indicator types (sha1, shad256, md5)
+- The VirusTotal API supports the following indicator types (sha1, sha256, md5)
 
 ## Sample Output
  ```python   
