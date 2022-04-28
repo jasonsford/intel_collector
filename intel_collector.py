@@ -501,7 +501,7 @@ class intel_collector:
                 print(domain + ' response from Microsoft Defender - Domains Stats')
                 d = json.dumps(event_array)
                 d = 'Microsoft' + d
-                d = d.replace('"@odata.context": "https://api.securitycenter.windows.com/api/$metadata#microsoft.windowsDefenderATP.api.InOrgIPStats"', '')
+                d = d.replace('"@odata.context": "https://api.securitycenter.windows.com/api/$metadata#microsoft.windowsDefenderATP.api.InOrgDomainStats"', '')
                 d = d.replace('"', '')
                 d = d.replace('{', '')
                 d = d.replace('}', '')
@@ -550,7 +550,7 @@ class intel_collector:
                 print(hash + ' response from Microsoft Defender - Global File Info')
                 d = json.dumps(event_array)
                 d = 'Microsoft' + d
-                d = d.replace('"@odata.context": "https://api.securitycenter.windows.com/api/$metadata#microsoft.windowsDefenderATP.api.InOrgIPStats"', '')
+                d = d.replace('"@odata.context": "https://api.securitycenter.windows.com/api/$metadata#Files/$entity"', '')
                 d = d.replace('"', '')
                 d = d.replace('{', '')
                 d = d.replace('}', '')
@@ -563,7 +563,7 @@ class intel_collector:
                 print(hash + ' response from Microsoft Defender - Organiation File Info')
                 d = json.dumps(event_array)
                 d = 'Microsoft' + d
-                d = d.replace('"@odata.context": "https://api.securitycenter.windows.com/api/$metadata#microsoft.windowsDefenderATP.api.InOrgIPStats"', '')
+                d = d.replace('"@odata.context": "https://api.securitycenter.windows.com/api/$metadata#Files/$entity"', '')
                 d = d.replace('"', '')
                 d = d.replace('{', '')
                 d = d.replace('}', '')
