@@ -47,7 +47,7 @@ self.virustotal_api_key = 'your virustotal api key'
 
 ## Disabling Modules
 
-Modules within each function can dsiabled if you don't have an API key or don't wish to utilize them. Add # to beginning of these lines as needed:    
+Modules within each function can be disabled if you don't have an API key or don't wish to utilize them. Add # to beginning of these lines as needed:    
 
 ```python
 find_domain
