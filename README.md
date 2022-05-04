@@ -1,7 +1,7 @@
 # intel_collector
 
 intel_collector is a Python library to query various sources of threat intelligence
-for data on domains, files hashes, and IP addresses. Responses that do not return
+for data on domains, file hashes, and IP addresses. Responses that do not return
 empty results are reformatted as comma separated values and written to CSV.
 
 CrowdStrike Falcon Intel and Microsoft Defender for Endpoint customers can also query
