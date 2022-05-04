@@ -7,20 +7,26 @@
 # CrowdStrike Falcon and Microsoft Defender for Endpoint customers can also query
 # their tenant for the presence of indicators within their own environment.
 # 
-# APIs Currently supported:
+# Currently supported:
 #
 #   CrowdStrike (falcon.crowdstrike.com)
 #   Emerging Threats Intelligence (emergingthreats.net)
 #   GreyNoise Community API (greynoise.io)
+#   Hybrid Analysis (hybrid-analysis.com)
 #   Microsoft Defender for Endpoint (api.securitycenter.windows.com)
 #   Onyphe Free Tier (onyphe.io)
 #   Shodan (shodan.io)
+#   Spamhaus Zen (spamhaus.org)
+#   Stalkphish (stalkphish.io)
+#   Urlscan.io (urlscan.io)
 #   VirusTotal Free Tier (virustotal.com)
 #
 # github.com/jasonsford
-# 26 April 2022
+# 4 May 2022
 
+import dns.resolver
 import json
+import re
 import requests
 import shodan
 import urllib.request
@@ -45,6 +51,10 @@ class intel_collector:
         self.greynoise_base_url = 'https://api.greynoise.io/v3/community/'
         self.greynoise_api_key = 'your greynoise community api key'
         
+        # Hybrid Analysis
+        self.hybrid_base_url = 'https://www.hybrid-analysis.com/api/v2/'
+        self.hybrid_api_key = 'your hybrid analysis api key'
+
         # Microsoft
         self.msft_base_url = 'https://login.windows.net/%s/oauth2/token'
         self.msft_app_url = 'https://api.securitycenter.windows.com'
@@ -59,10 +69,18 @@ class intel_collector:
         
         # Shodan
         self.shodan_api_key = 'your shodan api key'
+
+        # Stalkphish
+        self.stalkphish_base_url = 'https://www.stalkphish.io/api/v1/'
+        self.stalkphish_api_key = 'Token your stalkphish api key'
         
+        # Urlscan.io
+        self.urlscan_base_url = 'https://urlscan.io/api/v1/'
+        self.urlscan_api_key = 'your urlscan.io api key'
+
         # VirusTotal
         self.virustotal_base_url = 'https://www.virustotal.com/api/v3/'
-        self.virustotal_api_key = 'your virustotal api key'
+        self.virustotal_api_key = 'our virustotal api key'
 
     def find_domain(self, domain: str):
 
@@ -73,6 +91,7 @@ class intel_collector:
         self.msft_domain(domain)        # Microsoft Defender for Endpoint
         self.onyphe_domain(domain)      # Onyphe
         self.shodan_domain(domain)      # Shodan
+        self.urlscan_domain(domain)     # Urlscan.io
         self.virustotal_domain(domain)  # VirusTotal
 
         if(exists(self.flat_output_file) == True):
@@ -83,15 +102,18 @@ class intel_collector:
         now = datetime.now()
         self.flat_output_file = hash + "_" + now.strftime("%Y%m%d_%H%M%S") + ".csv"
 
+        self.hybrid_hash(hash)              # Hybrid Analysis
+        self.virustotal_hash(hash)          # VirusTotal
+                
         if(len(hash) == 32):
             self.crwd_iocs(hash,'md5')      # CrowdStrike Falcon
+            self.etintel_hash(hash)         # Proofpoint Emerging Threats
+        if(len(hash) == 40):
+            self.msft_hash(hash)            # Microsoft Defender for Endpoint            
         if(len(hash) == 64):
             self.crwd_iocs(hash,'sha256')   # CrowdStrike Falcon
-        if(len(hash) == 32):
-            self.etintel_hash(hash)         # Proofpoint Emerging Threats
-        if((len(hash) == 40) or (len(hash) == 64)):
-            self.msft_hash(hash)            # Microsoft Defender for Endpoint            
-        self.virustotal_hash(hash)          # VirusTotal
+            self.msft_hash(hash)            # Microsoft Defender for Endpoint
+            self.urlscan_hash(hash)         # Urlscan.io              
 
         if(exists(self.flat_output_file) == True):
             print('Results written to ' + self.flat_output_file)
@@ -107,6 +129,9 @@ class intel_collector:
         self.msft_ip(ip)                # Microsoft Defender for Endpoint
         self.onyphe_ip(ip)              # Onyphe
         self.shodan_ip(ip)              # Shodan
+        self.spamhaus_ip(ip)            # Spamhaus Zen
+        self.stalkphish_ip(ip)          # Stalkphish
+        self.urlscan_ip(ip)             # Urlscan.io
         self.virustotal_ip(ip)          # VirusTotal   
 
         if(exists(self.flat_output_file) == True):        
@@ -463,6 +488,30 @@ class intel_collector:
         d = d.replace('message:', 'message,')
         print(d, file=open(self.flat_output_file, "a"))
     
+    def hybrid_hash(self, hash: str):
+
+        hybrid_base_url = self.hybrid_base_url
+        hybrid_api_key = self.hybrid_api_key
+
+        hybrid_session = requests.session()
+        hybrid_session.verify = True
+        hybrid_session.headers = {'api-key':hybrid_api_key,'user-agent':'Falcon Sandbox','accept':'application/json','Content-Type':'application/x-www-form-urlencoded'}
+
+        hybrid_api_response = hybrid_session.post(hybrid_base_url + 'search/hash','hash=' + hash)
+
+        if(hybrid_api_response.status_code == 200):
+            event_array = json.loads(hybrid_api_response.text)
+            print(hash + ' response from Hybrid Analysis')
+            for e in event_array:
+                d = json.dumps(e)
+                d = 'Hybrid Analysis,' + d
+                d = d.replace('"', '')
+                d = d.replace('{', '')
+                d = d.replace('}', '')
+                d = d.replace(' ', '')
+                d = d.replace(':', ',')
+                print(d, file=open(self.flat_output_file, "a"))
+
     def msft_domain(self, domain: str):
 
         msft_base_url = self.msft_base_url
@@ -692,7 +741,7 @@ class intel_collector:
             print(d, file=open(self.flat_output_file, "a"))
 
         except shodan.APIError as error:
-            print('Shodan: {}'.format(error))
+            print(domain + ' not found in Shodan')
 
     def shodan_ip(self, ip: str):
 
@@ -715,8 +764,136 @@ class intel_collector:
             print(d, file=open(self.flat_output_file, "a"))
 
         except shodan.APIError as error:
-            print('Shodan: {}'.format(error))
+            print(ip + ' not found in Shodan')
     
+    def spamhaus_ip(self, ip:str):
+
+        spamhaus_ip_codes = {'127.0.0.2' :'SBL Data',
+                             '127.0.0.3' :'SBL CSS Data',
+                             '127.0.0.4' :'XBL CBL Data',
+                             '127.0.0.9' :'SBL DROP/EDROP Data',
+                             '127.0.0.10':'PBL ISP Maintained',
+                             '127.0.0.11':'PBL Spamhaus Maintained',
+                                        0:'Not Found in Spamhaus IP Data'}
+
+        spamhaus_dns_hostname = ".".join(ip.split(".")[::-1]) + ".zen.spamhaus.org"
+
+        try:
+            spamhaus_result = dns.resolver.resolve(spamhaus_dns_hostname, 'A')
+        except:
+            spamhaus_result = 0
+        
+        if(spamhaus_result != 0):
+            for data in spamhaus_result:
+                print(ip + ' response from Spamhaus Zen')
+                d = 'Spamhaus,ip,' + ip + ',return code,' + data.to_text() + ',response,' + spamhaus_ip_codes.get(data.to_text())
+                print(d, file=open(self.flat_output_file, "a"))
+
+    def stalkphish_ip(self, ip:str):
+
+        stalkphish_session = requests.session()
+        stalkphish_session.verify = True
+        stalkphish_session.headers = {'Authorization':self.stalkphish_api_key}
+
+        stalkphish_api_response = stalkphish_session.get(self.stalkphish_base_url + 'search/ipv4/' + ip)
+
+        if(stalkphish_api_response.status_code == 200):
+            event_array = json.loads(stalkphish_api_response.text)
+            print(ip + ' response from Stalkphish')
+            for e in event_array:
+                d = json.dumps(e)
+                d = 'Stalkphish,' + d
+                d = d.replace('"', '')
+                d = d.replace('{', '')
+                d = d.replace('}', '')
+                d = d.replace(' ', '')
+                d = d.replace('siteurl:', 'siteurl,')
+                d = d.replace('sitedomain:', 'sitedomain,')
+                d = d.replace('pagetitle:', 'pagetitle,')
+                d = d.replace('firstseencode:', 'firstseencode,')
+                d = d.replace('firstseentime:', 'firstseentime,')
+                d = d.replace('ipaddress:', 'ipaddress,')
+                d = d.replace('asn:', 'asn,')
+                d = d.replace('asndesc:', 'asndesc,')
+                d = d.replace('asnreg:', 'asnreg,')
+                d = d.replace('extracted_emails:', 'extracted_emails,')
+                print(d, file=open(self.flat_output_file, "a"))
+
+    def urlscan_domain(self, domain: str):
+        urlscan_base_url = self.urlscan_base_url
+        urlscan_api_key = self.urlscan_api_key
+        urlscan_session = requests.session()
+        urlscan_session.verify = True
+        urlscan_session.headers = {'API-Key':urlscan_api_key,'Content-Type':'application/json'}
+
+        urlscan_api_response = urlscan_session.get(urlscan_base_url + 'search/?q=domain:' + domain,headers=urlscan_session.headers)
+
+        if(urlscan_api_response.status_code == 200):
+            event_array = json.loads(urlscan_api_response.text)
+            print(domain + ' response from urlscan.io')
+            d = json.dumps(event_array)
+            d = 'urlscan.io,' + d
+            d = d.replace('"', '')
+            d = d.replace('{', '')
+            d = d.replace('[', '')
+            d = d.replace('}', '')
+            d = d.replace(']', '')
+            d = d.replace(' ', '')
+            d = d.replace(':',',')
+            d = d.replace('https,','https:')
+            d = re.sub('http,','http:',d)
+            print(d, file=open(self.flat_output_file, "a"))
+
+    def urlscan_hash(self, hash: str):
+
+        urlscan_base_url = self.urlscan_base_url
+        urlscan_api_key = self.urlscan_api_key
+        urlscan_session = requests.session()
+        urlscan_session.verify = True
+        urlscan_session.headers = {'API-Key':urlscan_api_key,'Content-Type':'application/json'}
+
+        urlscan_api_response = urlscan_session.get(urlscan_base_url + 'search/?q=hash:' + hash,headers=urlscan_session.headers)
+
+        if((urlscan_api_response.status_code == 200) and ("0" not in urlscan_api_response.text)):
+            event_array = json.loads(urlscan_api_response.text)
+            print(hash + ' response from urlscan.io')
+            d = json.dumps(event_array)
+            d = 'urlscan.io,' + d
+            d = d.replace('"', '')
+            d = d.replace('{', '')
+            d = d.replace('[', '')
+            d = d.replace('}', '')
+            d = d.replace(']', '')
+            d = d.replace(' ', '')
+            d = d.replace(':',',')
+            print(d, file=open(self.flat_output_file, "a"))
+
+    def urlscan_ip(self, ip: str):
+
+        urlscan_base_url = self.urlscan_base_url
+        urlscan_api_key = self.urlscan_api_key
+        urlscan_session = requests.session()
+        urlscan_session.verify = True
+        urlscan_session.headers = {'API-Key':urlscan_api_key,'Content-Type':'application/json'}
+
+        urlscan_api_response = urlscan_session.get(urlscan_base_url + 'search/?q=ip:' + ip,headers=urlscan_session.headers)
+
+        if(urlscan_api_response.status_code == 200):
+            event_array = json.loads(urlscan_api_response.text)
+            print(ip + ' response from urlscan.io')
+            d = json.dumps(event_array)
+            d = 'urlscan.io,' + d
+            d = d.replace('"', '')
+            d = d.replace('{', '')
+            d = d.replace('[', '')
+            d = d.replace('}', '')
+            d = d.replace(']', '')
+            d = d.replace(' ', '')
+            d = d.replace(':',',')
+            d = d.replace('https,','https:')
+            d = re.sub('http,','http:',d)
+            print(d, file=open(self.flat_output_file, "a"))
+
     def virustotal_domain(self, domain: str):
 
         virustotal_base_url = self.virustotal_base_url

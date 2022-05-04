@@ -12,9 +12,14 @@ their tenant for the presence of indicators within their own environment.
 CrowdStrike Falcon Intel (api.crowdstrike.com)
 <br>Emerging Threats Intelligence (api.emergingthreats.net)
 <br>GreyNoise Community API (api.greynoise.io)
+<br>Hybrid Analysis (hybrid-analysis.com)
 <br>Microsoft Defender for Endpoint (api.securitycenter.windows.com)
 <br>Onyphe Free Tier (onyphe.io)
 <br>Shodan (shodan.io)
+<br>Sorbs (sorbs.net)
+<br>Spamhaus Zen (spamhaus.org)
+<br>Stalkphish (stalkphish.io)
+<br>Urlscan.io (urlscan.io)
 <br>VirusTotal Free Tier (virustotal.com)
 
 ## Setting API keys
@@ -30,6 +35,9 @@ self.etintel_api_key = 'your emerging threats intelligence api key'
 # GreyNoise
 self.greynoise_api_key = 'your greynoise community api key'
 
+# Hybrid Analysis
+self.hybrid_api_key = 'your hybrid analysis api key'
+
 # Microsoft Defender for Endpoint
 self.msft_tenant_id = 'your M365 tenant id'
 self.msft_client_id = 'your M365 client id'
@@ -41,13 +49,19 @@ self.onyphe_api_key = 'apikey your onyphe api key'
 # Shodan
 self.shodan_api_key = 'your shodan api key'
 
+# Stalkphish
+self.stalkphish_api_key = 'your stalkphish api key'
+
+# Urlscan.io
+self.urlscan_api_key = 'your urlscan.io api key'
+
 # VirusTotal
 self.virustotal_api_key = 'your virustotal api key'
 ```
 
 ## Disabling Modules
 
-Modules within each function can be disabled if you don't have an API key or don't wish to utilize them. Add # to beginning of these lines as needed:    
+Modules within each function can dsiabled if you don't have an API key or don't wish to utilize them. Add # to beginning of these lines as needed:    
 
 ```python
 find_domain
@@ -56,23 +70,30 @@ find_domain
     self.msft_domain(domain)                    # Microsoft Defender for Endpoint
     self.onyphe_domain(domain)                  # Onyphe
     self.shodan_domain(domain)                  # Shodan
+    self.urlscan_domain(domain)
     self.virustotal_domain(domain)              # VirusTotal
 
 find_hash
 
-    self.crwd_iocs(hash,indicator_type)         # CrowdStrike Falcon
+    self.crwd_iocs(hash)                        # CrowdStrike Falcon
     self.etintel_hash(hash)                     # Proofpoint Emerging Threats
+    self.hybrid_hash(hash)                      # Hybrid Analysis
     self.msft_hash(hash)                        # Microsoft Defender for Endpoint
+    self.urlscan_hash(hash)                     # Urlscan.io
     self.virustotal_hash(hash)                  # VirusTotal
 
 find_ip
 
-    self.crwd_iocs(ip,'ipv4')                   # CrowdStrike Falcon
+    self.crwd_iocs(ip)                          # CrowdStrike Falcon
     self.etintel_ip(ip)                         # Proofpoint Emerging Threats
     self.greynoise(ip)                          # GreyNoise
     self.msft_ip(ip)                            # Microsoft Defender for Endpoint
     self.onyphe_ip(ip)                          # Onyphe
     self.shodan_ip(ip)                          # Shodan
+    self.sorbs_ip(ip)                           # Sorbs
+    self.spamhaus_ip(ip)                        # Spamhaus Zen
+    self.stalkphish_ip(ip)                      # Stalkphish
+    self.urlscan_ip(ip)                         # Urlscan.io
     self.virustotal_ip(ip)                      # VirusTotal
 ```
 
@@ -100,8 +121,10 @@ go.find_hash('177f3c8a2623d4efb41b0020d680be83')
 
 - The Crowdstrike Falcon API for custom IOCs supports the following indicator types (sha256, md5)
 - The ET Intel API supports the (md5) indicator type
+- The Hybrid Analysis API supports the following indicator types (sha1, shad256, md5)
 - The Microsoft Defender for Endpoint API supports the following indicator types (sha1, sha256)
-- The VirusTotal API supports the following indicator types (sha1, sha256, md5)
+- The Urlscan.io API supports the (sha256) indicator type
+- The VirusTotal API supports the following indicator types (sha1, shad256, md5)
 
 ## Sample Output
  ```python   
