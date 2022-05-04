@@ -1,7 +1,7 @@
 # intel_collector.py
 #
 # intel_collector is a Python library to query various sources of threat intelligence
-# for data on domains, files hashes, and IP addresses. Responses that do not return 
+# for data on domains, file hashes, and IP addresses. Responses that do not return 
 # empty results are reformatted as comma separated values and written to CSV.
 #
 # CrowdStrike Falcon and Microsoft Defender for Endpoint customers can also query
@@ -80,7 +80,7 @@ class intel_collector:
 
         # VirusTotal
         self.virustotal_base_url = 'https://www.virustotal.com/api/v3/'
-        self.virustotal_api_key = 'our virustotal api key'
+        self.virustotal_api_key = 'your virustotal api key'
 
     def find_domain(self, domain: str):
 
