@@ -7,6 +7,8 @@ Support for:
 - Circl.lu
 - Echotrail.io
 - Urlhaus
+
+### Added
 requirements.txt
 
 ## [1.0.1] - 4 May 2022
