@@ -1,7 +1,7 @@
 # intel_collector
 
 intel_collector is a Python library to query various sources of threat intelligence
-for data on domains, file hashes, and IP addresses. Responses that do not return
+for data on domains, file  hashes, and IP addresses. Responses that do not return
 empty results are reformatted as comma separated values and written to CSV.
 
 CrowdStrike Falcon Intel and Microsoft Defender for Endpoint customers can also query
@@ -9,7 +9,9 @@ their tenant for the presence of indicators within their own environment.
 
 ## Supported APIs
 
-CrowdStrike Falcon Intel (api.crowdstrike.com)
+Circl.lu (hashlookup.circl.lu)
+<br>CrowdStrike Falcon Intel (api.crowdstrike.com)
+<br>Echotrail.io (echotrail.io)
 <br>Emerging Threats Intelligence (api.emergingthreats.net)
 <br>GreyNoise Community API (api.greynoise.io)
 <br>Hybrid Analysis (hybrid-analysis.com)
@@ -19,6 +21,7 @@ CrowdStrike Falcon Intel (api.crowdstrike.com)
 <br>Sorbs (sorbs.net)
 <br>Spamhaus Zen (spamhaus.org)
 <br>Stalkphish (stalkphish.io)
+<br>Urlhaus (urlhaus-api.abuse.ch)
 <br>Urlscan.io (urlscan.io)
 <br>VirusTotal Free Tier (virustotal.com)
 
@@ -28,6 +31,9 @@ CrowdStrike Falcon Intel (api.crowdstrike.com)
 # CrowdStrike
 self.crwd_client_id = 'your crowdstrike api client id'
 self.crwd_client_secret = 'your crowdstrike api client secret'
+
+# Echotrail.io
+self.echotrail_api_key = 'your echotrail.io api key'
 
 # Emerging Threats Intelligence (Proofpoint)
 self.etintel_api_key = 'your emerging threats intelligence api key'
@@ -50,7 +56,7 @@ self.onyphe_api_key = 'apikey your onyphe api key'
 self.shodan_api_key = 'your shodan api key'
 
 # Stalkphish
-self.stalkphish_api_key = 'your stalkphish api key'
+self.stalkphish_api_key = 'Token your stalkphish api key'
 
 # Urlscan.io
 self.urlscan_api_key = 'your urlscan.io api key'
@@ -61,7 +67,7 @@ self.virustotal_api_key = 'your virustotal api key'
 
 ## Disabling Modules
 
-Modules within each function can disabled if you don't have an API key or don't wish to utilize them. Add # to beginning of these lines as needed:    
+All modules are enabled by default. Modules within each function can disabled if you don't have an API key or don't wish to utilize them. Add # to beginning of these lines as needed:    
 
 ```python
 find_domain
@@ -70,15 +76,19 @@ find_domain
     self.msft_domain(domain)                    # Microsoft Defender for Endpoint
     self.onyphe_domain(domain)                  # Onyphe
     self.shodan_domain(domain)                  # Shodan
+    self.urlhaus_iocs(domain,'host')            # Urlhaus
     self.urlscan_domain(domain)                 # Urlscan.io
     self.virustotal_domain(domain)              # VirusTotal
 
 find_hash
 
+    self.circl_hash(hash)                       # Circl.lu
     self.crwd_iocs(hash)                        # CrowdStrike Falcon
+    self.echotrail_hash(hash)                   # Echotrail.io
     self.etintel_hash(hash)                     # Proofpoint Emerging Threats
     self.hybrid_hash(hash)                      # Hybrid Analysis
     self.msft_hash(hash)                        # Microsoft Defender for Endpoint
+    self.urlhaus_iocs(hash,type)                # Urlhaus
     self.urlscan_hash(hash)                     # Urlscan.io
     self.virustotal_hash(hash)                  # VirusTotal
 
@@ -93,6 +103,7 @@ find_ip
     self.sorbs_ip(ip)                           # Sorbs
     self.spamhaus_ip(ip)                        # Spamhaus Zen
     self.stalkphish_ip(ip)                      # Stalkphish
+    self.urlhaus_iocs(ip,'host')                # Urlhaus
     self.urlscan_ip(ip)                         # Urlscan.io
     self.virustotal_ip(ip)                      # VirusTotal
 ```
@@ -120,9 +131,11 @@ go.find_hash('177f3c8a2623d4efb41b0020d680be83')
 ### Helpful hints for searching file hashes:
 
 - The Crowdstrike Falcon API for custom IOCs supports the following indicator types (sha256, md5)
+- The Echotrail API supports the following indicator types (sha256, md5)
 - The ET Intel API supports the (md5) indicator type
 - The Hybrid Analysis API supports the following indicator types (sha1, shad256, md5)
 - The Microsoft Defender for Endpoint API supports the following indicator types (sha1, sha256)
+- The Urlhaus Abuse API supports the following indicator types (sha256, md5)
 - The Urlscan.io API supports the (sha256) indicator type
 - The VirusTotal API supports the following indicator types (sha1, shad256, md5)
 

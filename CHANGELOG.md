@@ -1,6 +1,14 @@
 # Changelog
 All notable changes to intel_collector will be documented here.
 
+## [1.0.2] - 12 May 2022
+### Added
+Support for:
+- Circl.lu
+- Echotrail.io
+- Urlhaus
+requirements.txt
+
 ## [1.0.1] - 4 May 2022
 ### Added
 Support for:
