@@ -657,7 +657,7 @@ class intel_collector:
 
             if(msft_domain_stats.status_code == 200):
                 event_array = json.loads(msft_domain_stats.text)
-                print(domain + ' response from Microsoft Defender - Domains Stats')
+                print(domain + ' response from Microsoft Defender - Domain Stats')
                 d = json.dumps(event_array)
                 d = 'Microsoft' + d
                 d = d.replace('"@odata.context": "https://api.securitycenter.windows.com/api/$metadata#microsoft.windowsDefenderATP.api.InOrgDomainStats"', '')
@@ -719,7 +719,7 @@ class intel_collector:
 
             if(msft_orgfile_stats.status_code == 200):
                 event_array = json.loads(msft_orgfile_stats.text)
-                print(hash + ' response from Microsoft Defender - Organiation File Info')
+                print(hash + ' response from Microsoft Defender - Organization File Info')
                 d = json.dumps(event_array)
                 d = 'Microsoft' + d
                 d = d.replace('"@odata.context": "https://api.securitycenter.windows.com/api/$metadata#Files/$entity"', '')
