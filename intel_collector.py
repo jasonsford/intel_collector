@@ -193,7 +193,7 @@ class intel_collector:
         
         if(circl_api_response.status_code == 200):
             event_array = json.loads(circl_api_response.text)
-            print(hash + ' response from circl.lu')
+            print(indicator + ' response from circl.lu')
             d = json.dumps(event_array)
             d = 'circl.lu,' + d
             d = d.replace('"', '')
