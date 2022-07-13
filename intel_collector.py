@@ -11,8 +11,9 @@
 #
 #   Circl.lu (hashlookup.circl.lu)
 #   CrowdStrike (falcon.crowdstrike.com)
-#   Echotrail.io (echotrail.io)
+#   Echotrail (echotrail.io)
 #   Emerging Threats Intelligence (emergingthreats.net)
+#   Filescan (filescan.io)
 #   GreyNoise Community API (greynoise.io)
 #   Hybrid Analysis (hybrid-analysis.com)
 #   Microsoft Defender for Endpoint (api.securitycenter.windows.com)
@@ -22,11 +23,11 @@
 #   Spamhaus Zen (spamhaus.org)
 #   Stalkphish (stalkphish.io)
 #   Urlhaus (urlhaus-api.abuse.ch)
-#   Urlscan.io (urlscan.io)
+#   Urlscan (urlscan.io)
 #   VirusTotal Free Tier (virustotal.com)
 #
 # github.com/jasonsford
-# 12 May 2022
+# 13 July 2022
 
 import dns.resolver
 import json
@@ -51,12 +52,16 @@ class intel_collector:
         self.crwd_client_secret = 'your crowdstrike api client secret'
         
         # Echotrail.io
-        self.echotrail_base_url = 'https://api.echotrail.io/v1/private/'
-        self.echotrail_api_key = 'your echotrail.io api key'
+        self.echotrail_base_url = 'https://api.echotrail.io/v1/private/insights/'
+        self.echotrail_api_key = 'your echotrail api key'
 
         # Emerging Threats Intelligence (Proofpoint)
         self.etintel_base_url = 'https://api.emergingthreats.net/v1/'
         self.etintel_api_key = 'your emerging threats intelligence api key'
+        
+        # Filescan.io
+        self.filescan_base_url = 'https://filescan.io/api/'
+        self.filescan_api_key = 'your filescan.io api key'
         
         # GreyNoise
         self.greynoise_base_url = 'https://api.greynoise.io/v3/community/'
@@ -74,7 +79,6 @@ class intel_collector:
         self.msft_client_secret = 'your M365 client secret'
         
         # Onyphe
-        self.onyphe_simple_base_url = 'https://www.onyphe.io/api/v2/simple/'
         self.onyphe_summary_base_url = 'https://www.onyphe.io/api/v2/summary/'
         self.onyphe_api_key = 'apikey your onyphe api key'
         
@@ -85,9 +89,13 @@ class intel_collector:
         self.stalkphish_base_url = 'https://www.stalkphish.io/api/v1/'
         self.stalkphish_api_key = 'Token your stalkphish api key'
         
+        # Tria.ge
+        self.triage_base_url = 'https://api.tria.ge/v0/'
+        self.triage_api_key = 'your tria.ge api key'
+
         # Urlhaus
-        self.urlhaus_base_url = 'https://urlhaus-api.abuse.ch/v1/'
-        
+        self.urlhaus_base_url = 'https://urlhaus-api.abuse.ch/v1'
+
         # Urlscan.io
         self.urlscan_base_url = 'https://urlscan.io/api/v1/'
         self.urlscan_api_key = 'your urlscan.io api key'
@@ -101,12 +109,13 @@ class intel_collector:
         now = datetime.now()
         self.flat_output_file = domain + "_" + now.strftime("%Y%m%d_%H%M%S") + ".csv"
 
-        self.etintel_domain(domain)         # Proofpoint Emerging Threats
+        self.etintel_domain(domain)         # Emerging Threats
         self.msft_domain(domain)            # Microsoft Defender for Endpoint
         self.onyphe_domain(domain)          # Onyphe
         self.shodan_domain(domain)          # Shodan
-        self.urlscan_domain(domain)         # Urlscan.io
+        self.triage_iocs(domain,'domain')   # Tria.ge
         self.urlhaus_iocs(domain,'host')    # Urlhaus
+        self.urlscan_domain(domain)         # Urlscan.io
         self.virustotal_domain(domain)      # VirusTotal
 
         if(exists(self.flat_output_file) == True):
@@ -116,24 +125,37 @@ class intel_collector:
 
         now = datetime.now()
         self.flat_output_file = hash + "_" + now.strftime("%Y%m%d_%H%M%S") + ".csv"
-
-        self.circl_hash(hash)                   # Circl.lu
-        self.hybrid_hash(hash)                  # Hybrid Analysis
-        self.virustotal_hash(hash)              # VirusTotal
                 
         if(len(hash) == 32):
+            self.circl_hash(hash,'md5')         # Circl.lu
             self.crwd_iocs(hash,'md5')          # CrowdStrike Falcon
             self.echotrail_hash(hash)           # Echotrail.io
-            self.etintel_hash(hash)             # Proofpoint Emerging Threats
+            self.etintel_hash(hash)             # Emerging Threats
+            self.filescan_hash(hash,'md5')      # Filescan.io
+            self.hybrid_hash(hash)              # Hybrid Analysis
+            self.triage_iocs(hash,'md5')        # Tria.ge
             self.urlhaus_iocs(hash,'md5')       # Urlhaus
+            self.virustotal_hash(hash)          # VirusTotal
         if(len(hash) == 40):
+            self.circl_hash(hash,'sha1')        # Circl.lu
+            self.filescan_hash(hash,'sha1')     # Filescan.io
+            self.hybrid_hash(hash)              # Hybrid Analysis
             self.msft_hash(hash)                # Microsoft Defender for Endpoint            
+            self.triage_iocs(hash,'sha1')       # Tria.ge
+            self.virustotal_hash(hash)          # VirusTotal
         if(len(hash) == 64):
+            self.circl_hash(hash,'sha256')      # Circl.lu
             self.crwd_iocs(hash,'sha256')       # CrowdStrike Falcon
             self.echotrail_hash(hash)           # Echotrail.io
+            self.filescan_hash(hash,'sha256')   # Filescan.io
+            self.hybrid_hash(hash)              # Hybrid Analysis
             self.msft_hash(hash)                # Microsoft Defender for Endpoint
+            self.triage_iocs(hash,'sha256')     # Tria.ge
             self.urlhaus_iocs(hash,'sha256')    # Urlhaus
-            self.urlscan_hash(hash)             # Urlscan.io              
+            self.urlscan_hash(hash)             # Urlscan.io
+            self.virustotal_hash(hash)          # VirusTotal
+        if(len(hash) == 128):
+            self.triage_iocs(hash,'sha512')     # Tria.ge
 
         if(exists(self.flat_output_file) == True):
             print('Results written to ' + self.flat_output_file)
@@ -144,7 +166,7 @@ class intel_collector:
         self.flat_output_file = ip + "_" + now.strftime("%Y%m%d_%H%M%S") + ".csv"
 
         self.crwd_iocs(ip,'ipv4')       # CrowdStrike Falcon
-        self.etintel_ip(ip)             # Proofpoint Emerging Threats
+        self.etintel_ip(ip)             # Emerging Threats
         self.greynoise(ip)              # GreyNoise
         self.msft_ip(ip)                # Microsoft Defender for Endpoint
         self.onyphe_ip(ip)              # Onyphe
@@ -152,6 +174,7 @@ class intel_collector:
         self.sorbs_ip(ip)               # Sorbs
         self.spamhaus_ip(ip)            # Spamhaus Zen
         self.stalkphish_ip(ip)          # Stalkphish
+        self.triage_iocs(ip,'ip')       # Tria.ge
         self.urlhaus_iocs(ip,'host')    # Urlhaus
         self.urlscan_ip(ip)             # Urlscan.io
         self.virustotal_ip(ip)          # VirusTotal   
@@ -159,25 +182,20 @@ class intel_collector:
         if(exists(self.flat_output_file) == True):        
             print('Results written to ' + self.flat_output_file)
 
-    def circl_hash(self, hash:str):
+    def circl_hash(self, indicator: str, indicator_type: str):
 
         circl_base_url = self.circl_base_url
         circl_session = requests.session()
         circl_session.verify = True
-        circl_session.headers = {'accept':'application/json'}
+        circl_session.headers = {'accept':'applicatoin/json'}
 
-        if(len(hash) == 32):
-            circl_api_response = circl_session.get(circl_base_url + 'md5/' + hash,headers=circl_session.headers)
-        if(len(hash) == 40):
-            circl_api_response = circl_session.get(circl_base_url + 'sha1/' + hash,headers=circl_session.headers)
-        if(len(hash) == 64):
-            circl_api_response = circl_session.get(circl_base_url + 'sha256/' + hash,headers=circl_session.headers)
-
+        circl_api_response = circl_session.get(circl_base_url + indicator_type + '/' + indicator,headers=circl_session.headers)
+        
         if(circl_api_response.status_code == 200):
             event_array = json.loads(circl_api_response.text)
-            print(hash + ' response from circl.io')
+            print(hash + ' response from circl.lu')
             d = json.dumps(event_array)
-            d = 'circl.io,' + d
+            d = 'circl.lu,' + d
             d = d.replace('"', '')
             d = d.replace('{', '')
             d = d.replace('}', '')
@@ -225,8 +243,7 @@ class intel_collector:
         echotrail_session = requests.session()
         echotrail_session.verify = True
         echotrail_session.headers = {'X-Api-Key':echotrail_api_key,'Content-Type':'application/json'}
-
-        echotrail_api_response = echotrail_session.get(echotrail_base_url + 'insights/' + hash,headers=echotrail_session.headers)
+        echotrail_api_response = echotrail_session.get(echotrail_base_url + hash,headers=echotrail_session.headers)
 
         if(echotrail_api_response.status_code == 200):
             event_array = json.loads(echotrail_api_response.text)
@@ -238,7 +255,7 @@ class intel_collector:
             d = d.replace('}', '')
             d = d.replace(':',',')
             d = d.replace('message, ','')
-            print(d, file=open(self.flat_output_file, "a"))
+            print(d, file=open(self.flat_output_file, "a"))  
 
     def etintel_domain(self, domain: str):
 
@@ -529,6 +546,30 @@ class intel_collector:
                 d = d.replace(' ', '')
                 d = d.replace(':', ',')
                 print(d, file=open(self.flat_output_file, "a"))
+
+    def filescan_hash(self, hash: str, indicator_type: str):
+
+        filescan_base_url = self.filescan_base_url
+        filescan_api_key = self.filescan_api_key
+        filescan_session = requests.session()
+        filescan_session.verify = True
+        filescan_session.headers = {'X-Api-Key':filescan_api_key,'Content-Type':'application/json'}
+        
+        filescan_api_response = filescan_session.get(filescan_base_url + 'reports/search?' + indicator_type + '=' + hash,headers=filescan_session.headers)
+
+        if(filescan_api_response.status_code == 200):
+            event_array = json.loads(filescan_api_response.text)
+            print(hash + ' response from filescan.io')
+            d = json.dumps(event_array)
+            d = 'filescan.io,' + d
+            d = d.replace('"', '')
+            d = d.replace('{', '')
+            d = d.replace('[', '')
+            d = d.replace('}', '')
+            d = d.replace(']', '')
+            d = d.replace(' ', '')
+            d = d.replace(':',',')
+            print(d, file=open(self.flat_output_file, "a"))
 
     def greynoise(self, ip: str):
 
@@ -917,6 +958,28 @@ class intel_collector:
                 d = d.replace('extracted_emails:', 'extracted_emails,')
                 print(d, file=open(self.flat_output_file, "a"))
 
+    def triage_iocs(self, indicator: str, indicator_type: str):
+        triage_base_url = self.triage_base_url
+        triage_api_key = self.triage_api_key
+        triage_session = requests.session()
+        triage_session.verify = True
+        triage_session.headers = {'Authorization':'Bearer ' + triage_api_key,'Content-Type':'application/json'}
+        triage_api_response = triage_session.get(triage_base_url + 'search?query=' + indicator_type + ':' + indicator,headers=triage_session.headers)
+
+        if((triage_api_response.status_code == 200) and ("null" not in triage_api_response.text)):
+            event_array = json.loads(triage_api_response.text)
+            print(indicator + ' response from tria.ge')
+            d = json.dumps(event_array)
+            d = 'tria.ge,' + d
+            d = d.replace('"', '')
+            d = d.replace('{', '')
+            d = d.replace('[', '')
+            d = d.replace('}', '')
+            d = d.replace(']', '')
+            d = d.replace(' ', '')
+            d = d.replace(':',',')
+            print(d, file=open(self.flat_output_file, "a"))
+
     def urlhaus_iocs(self, indicator: str, indicator_type: str):
 
         urlhaus_base_url = self.urlhaus_base_url
@@ -930,25 +993,24 @@ class intel_collector:
         else:
             urlhaus_api_response = urlhaus_session.post(urlhaus_base_url + 'payload/', urlhaus_data, headers=urlhaus_session.headers)
 
-        if "no_results" not in urlhaus_api_response.text:
+        if((urlhaus_api_response.status_code == 200) and ("no_results" not in urlhaus_api_response.text)):
             event_array = json.loads(urlhaus_api_response.text)
             print(indicator + ' response from urlhaus')
             d = json.dumps(event_array)
-            d = 'urlhauso,' + d
+            d = 'urlhaus,' + d
             d = d.replace('"', '')
             d = d.replace('{', '')
             d = d.replace('}', '')
             d = d.replace(' ', '')
             d = d.replace(':',',')
             print(d, file=open(self.flat_output_file, "a"))
-
+    
     def urlscan_domain(self, domain: str):
         urlscan_base_url = self.urlscan_base_url
         urlscan_api_key = self.urlscan_api_key
         urlscan_session = requests.session()
         urlscan_session.verify = True
         urlscan_session.headers = {'API-Key':urlscan_api_key,'Content-Type':'application/json'}
-
         urlscan_api_response = urlscan_session.get(urlscan_base_url + 'search/?q=domain:' + domain,headers=urlscan_session.headers)
 
         if(urlscan_api_response.status_code == 200):

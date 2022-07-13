@@ -1,12 +1,24 @@
 # Changelog
 All notable changes to intel_collector will be documented here.
 
+## [1.0.3] - 13 July 2022
+### Added
+Support for:
+- Filescan.io (File Hashes)
+- Tria.ge (Domains, File Hashes, IPs)
+
+Support for:
+- SHA512 file hashes (currently limited to Tria.ge)
+
+### Removed
+- Onyphe Simple Base URL
+
 ## [1.0.2] - 12 May 2022
 ### Added
 Support for:
-- Circl.lu
-- Echotrail.io
-- Urlhaus
+- Circl.lu (File Hashes)
+- Echotrail.io (File Hashes)
+- Urlhaus (Domains, File Hashes, IPs)
 
 ### Added
 requirements.txt
