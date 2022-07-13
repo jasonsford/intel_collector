@@ -187,7 +187,7 @@ class intel_collector:
         circl_base_url = self.circl_base_url
         circl_session = requests.session()
         circl_session.verify = True
-        circl_session.headers = {'accept':'applicatoin/json'}
+        circl_session.headers = {'accept':'application/json'}
 
         circl_api_response = circl_session.get(circl_base_url + indicator_type + '/' + indicator,headers=circl_session.headers)
         
