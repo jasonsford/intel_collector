@@ -1,6 +1,19 @@
 # Changelog
 All notable changes to intel_collector will be documented here.
 
+## [1.0.4] - 30 August 2022
+### Added
+- Input validation to check whether input is a properly formatted domain name, IP address, or file hash of appropriate length (validate.py)
+Support for:
+- Netlas.io (Domains, IPs)
+
+### Changed
+- Updated README to reflect Free vs Paid API resources
+
+### Removed
+- List of APIs from within the script comments to leverage markdown in the README
+- Excessive variables within functions. More code cleanup to come in 1.0.5 :-)
+
 ## [1.0.3] - 13 July 2022
 ### Added
 Support for:

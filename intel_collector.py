@@ -6,28 +6,9 @@
 #
 # CrowdStrike Falcon and Microsoft Defender for Endpoint customers can also query
 # their tenant for the presence of indicators within their own environment.
-# 
-# Currently supported:
-#
-#   Circl.lu (hashlookup.circl.lu)
-#   CrowdStrike (falcon.crowdstrike.com)
-#   Echotrail (echotrail.io)
-#   Emerging Threats Intelligence (emergingthreats.net)
-#   Filescan (filescan.io)
-#   GreyNoise Community API (greynoise.io)
-#   Hybrid Analysis (hybrid-analysis.com)
-#   Microsoft Defender for Endpoint (api.securitycenter.windows.com)
-#   Onyphe Free Tier (onyphe.io)
-#   Shodan (shodan.io)
-#   Sorbs (sorbs.net)
-#   Spamhaus Zen (spamhaus.org)
-#   Stalkphish (stalkphish.io)
-#   Urlhaus (urlhaus-api.abuse.ch)
-#   Urlscan (urlscan.io)
-#   VirusTotal Free Tier (virustotal.com)
 #
 # github.com/jasonsford
-# 13 July 2022
+# 30 August 2022
 
 import dns.resolver
 import json
@@ -38,6 +19,7 @@ import urllib.request
 import urllib.parse
 from datetime import datetime
 from os.path import exists
+from validate import isValidDomain, isValidFileHash, isValidIpAddress
 
 class intel_collector:
     
@@ -78,16 +60,20 @@ class intel_collector:
         self.msft_client_id = 'your M365 client id'
         self.msft_client_secret = 'your M365 client secret'
         
+        # Netlas
+        self.netlas_base_url = 'https://app.netlas.io'
+        self.netlas_api_key = 'your netlas api key'
+
         # Onyphe
         self.onyphe_summary_base_url = 'https://www.onyphe.io/api/v2/summary/'
-        self.onyphe_api_key = 'apikey your onyphe api key'
+        self.onyphe_api_key = 'apikey <your onyphe api key>'
         
         # Shodan
         self.shodan_api_key = 'your shodan api key'
 
         # Stalkphish
         self.stalkphish_base_url = 'https://www.stalkphish.io/api/v1/'
-        self.stalkphish_api_key = 'Token your stalkphish api key'
+        self.stalkphish_api_key = 'Token <your stalkphish api key>'
         
         # Tria.ge
         self.triage_base_url = 'https://api.tria.ge/v0/'
@@ -106,90 +92,121 @@ class intel_collector:
 
     def find_domain(self, domain: str):
 
-        now = datetime.now()
-        self.flat_output_file = domain + "_" + now.strftime("%Y%m%d_%H%M%S") + ".csv"
+        validDomain = False
+        try:
+            validDomain = isValidDomain(domain)
+        except:
+            pass
 
-        self.etintel_domain(domain)         # Emerging Threats
-        self.msft_domain(domain)            # Microsoft Defender for Endpoint
-        self.onyphe_domain(domain)          # Onyphe
-        self.shodan_domain(domain)          # Shodan
-        self.triage_iocs(domain,'domain')   # Tria.ge
-        self.urlhaus_iocs(domain,'host')    # Urlhaus
-        self.urlscan_domain(domain)         # Urlscan.io
-        self.virustotal_domain(domain)      # VirusTotal
+        if validDomain is True:
+            now = datetime.now()
+            self.flat_output_file = domain + "_" + now.strftime("%Y%m%d_%H%M%S") + ".csv"
+            
+            self.etintel_domain(domain)         # Emerging Threats
+            self.msft_domain(domain)            # Microsoft Defender for Endpoint
+            self.netlas_iocs(domain)            # Netlas.io
+            self.onyphe_domain(domain)          # Onyphe
+            self.shodan_domain(domain)          # Shodan
+            self.triage_iocs(domain,'domain')   # Tria.ge
+            self.urlhaus_iocs(domain,'host')    # Urlhaus
+            self.urlscan_domain(domain)         # Urlscan.io
+            self.virustotal_domain(domain)      # VirusTotal
 
-        if(exists(self.flat_output_file) == True):
-            print('Results written to ' + self.flat_output_file)
+            if(exists(self.flat_output_file) == True):
+                print('Results written to ' + self.flat_output_file)
+
+        else:
+            print(domain + ' is not a valid domain name.')
 
     def find_hash(self, hash: str):
 
-        now = datetime.now()
-        self.flat_output_file = hash + "_" + now.strftime("%Y%m%d_%H%M%S") + ".csv"
-                
-        if(len(hash) == 32):
-            self.circl_hash(hash,'md5')         # Circl.lu
-            self.crwd_iocs(hash,'md5')          # CrowdStrike Falcon
-            self.echotrail_hash(hash)           # Echotrail.io
-            self.etintel_hash(hash)             # Emerging Threats
-            self.filescan_hash(hash,'md5')      # Filescan.io
-            self.hybrid_hash(hash)              # Hybrid Analysis
-            self.triage_iocs(hash,'md5')        # Tria.ge
-            self.urlhaus_iocs(hash,'md5')       # Urlhaus
-            self.virustotal_hash(hash)          # VirusTotal
-        if(len(hash) == 40):
-            self.circl_hash(hash,'sha1')        # Circl.lu
-            self.filescan_hash(hash,'sha1')     # Filescan.io
-            self.hybrid_hash(hash)              # Hybrid Analysis
-            self.msft_hash(hash)                # Microsoft Defender for Endpoint            
-            self.triage_iocs(hash,'sha1')       # Tria.ge
-            self.virustotal_hash(hash)          # VirusTotal
-        if(len(hash) == 64):
-            self.circl_hash(hash,'sha256')      # Circl.lu
-            self.crwd_iocs(hash,'sha256')       # CrowdStrike Falcon
-            self.echotrail_hash(hash)           # Echotrail.io
-            self.filescan_hash(hash,'sha256')   # Filescan.io
-            self.hybrid_hash(hash)              # Hybrid Analysis
-            self.msft_hash(hash)                # Microsoft Defender for Endpoint
-            self.triage_iocs(hash,'sha256')     # Tria.ge
-            self.urlhaus_iocs(hash,'sha256')    # Urlhaus
-            self.urlscan_hash(hash)             # Urlscan.io
-            self.virustotal_hash(hash)          # VirusTotal
-        if(len(hash) == 128):
-            self.triage_iocs(hash,'sha512')     # Tria.ge
+        validFileHash = False
+        try:
+            validFileHash = isValidFileHash(hash)
+        except:
+            pass
 
-        if(exists(self.flat_output_file) == True):
-            print('Results written to ' + self.flat_output_file)
+        if validFileHash is True:
+            now = datetime.now()
+            self.flat_output_file = hash + "_" + now.strftime("%Y%m%d_%H%M%S") + ".csv"
+                    
+            if(len(hash) == 32):
+                self.circl_hash(hash,'md5')         # Circl.lu
+                self.crwd_iocs(hash,'md5')          # CrowdStrike Falcon
+                self.echotrail_hash(hash)           # Echotrail.io
+                self.etintel_hash(hash)             # Emerging Threats
+                self.filescan_hash(hash,'md5')      # Filescan.io
+                self.hybrid_hash(hash)              # Hybrid Analysis
+                self.triage_iocs(hash,'md5')        # Tria.ge
+                self.urlhaus_iocs(hash,'md5')       # Urlhaus
+                self.virustotal_hash(hash)          # VirusTotal
+            if(len(hash) == 40):
+                self.circl_hash(hash,'sha1')        # Circl.lu
+                self.filescan_hash(hash,'sha1')     # Filescan.io
+                self.hybrid_hash(hash)              # Hybrid Analysis
+                self.msft_hash(hash)                # Microsoft Defender for Endpoint            
+                self.triage_iocs(hash,'sha1')       # Tria.ge
+                self.virustotal_hash(hash)          # VirusTotal
+            if(len(hash) == 64):
+                self.circl_hash(hash,'sha256')      # Circl.lu
+                self.crwd_iocs(hash,'sha256')       # CrowdStrike Falcon
+                self.echotrail_hash(hash)           # Echotrail.io
+                self.filescan_hash(hash,'sha256')   # Filescan.io
+                self.hybrid_hash(hash)              # Hybrid Analysis
+                self.msft_hash(hash)                # Microsoft Defender for Endpoint
+                self.triage_iocs(hash,'sha256')     # Tria.ge
+                self.urlhaus_iocs(hash,'sha256')    # Urlhaus
+                self.urlscan_hash(hash)             # Urlscan.io
+                self.virustotal_hash(hash)          # VirusTotal
+            if(len(hash) == 128):
+                self.triage_iocs(hash,'sha512')     # Tria.ge
+
+            if(exists(self.flat_output_file) == True):
+                print('Results written to ' + self.flat_output_file)
+
+        else:
+            print(hash + ' is not a valid file hash.')
 
     def find_ip(self, ip: str):
     
-        now = datetime.now()
-        self.flat_output_file = ip + "_" + now.strftime("%Y%m%d_%H%M%S") + ".csv"
+        validIpAddress = False
+        try:
+            validIpAddress = isValidIpAddress(ip)
+        except:
+            pass
 
-        self.crwd_iocs(ip,'ipv4')       # CrowdStrike Falcon
-        self.etintel_ip(ip)             # Emerging Threats
-        self.greynoise(ip)              # GreyNoise
-        self.msft_ip(ip)                # Microsoft Defender for Endpoint
-        self.onyphe_ip(ip)              # Onyphe
-        self.shodan_ip(ip)              # Shodan
-        self.sorbs_ip(ip)               # Sorbs
-        self.spamhaus_ip(ip)            # Spamhaus Zen
-        self.stalkphish_ip(ip)          # Stalkphish
-        self.triage_iocs(ip,'ip')       # Tria.ge
-        self.urlhaus_iocs(ip,'host')    # Urlhaus
-        self.urlscan_ip(ip)             # Urlscan.io
-        self.virustotal_ip(ip)          # VirusTotal   
+        if validIpAddress is True:
+            now = datetime.now()
+            self.flat_output_file = ip + "_" + now.strftime("%Y%m%d_%H%M%S") + ".csv"
 
-        if(exists(self.flat_output_file) == True):        
-            print('Results written to ' + self.flat_output_file)
+            self.crwd_iocs(ip,'ipv4')       # CrowdStrike Falcon
+            self.etintel_ip(ip)             # Emerging Threats
+            self.greynoise(ip)              # GreyNoise
+            self.msft_ip(ip)                # Microsoft Defender for Endpoint
+            self.netlas_iocs(ip)            # Netlas.io
+            self.onyphe_ip(ip)              # Onyphe
+            self.shodan_ip(ip)              # Shodan
+            self.sorbs_ip(ip)               # Sorbs
+            self.spamhaus_ip(ip)            # Spamhaus Zen
+            self.stalkphish_ip(ip)          # Stalkphish
+            self.triage_iocs(ip,'ip')       # Tria.ge
+            self.urlhaus_iocs(ip,'host')    # Urlhaus
+            self.urlscan_ip(ip)             # Urlscan.io
+            self.virustotal_ip(ip)          # VirusTotal   
+
+            if(exists(self.flat_output_file) == True):        
+                print('Results written to ' + self.flat_output_file)
+
+        else:
+            print(ip + ' is not a valid, publicly routable IPv4 address.')
 
     def circl_hash(self, indicator: str, indicator_type: str):
 
-        circl_base_url = self.circl_base_url
         circl_session = requests.session()
         circl_session.verify = True
         circl_session.headers = {'accept':'application/json'}
 
-        circl_api_response = circl_session.get(circl_base_url + indicator_type + '/' + indicator,headers=circl_session.headers)
+        circl_api_response = circl_session.get(self.circl_base_url + indicator_type + '/' + indicator,headers=circl_session.headers)
         
         if(circl_api_response.status_code == 200):
             event_array = json.loads(circl_api_response.text)
@@ -204,15 +221,12 @@ class intel_collector:
 
     def crwd_iocs(self, indicator: str, indicator_type: str):
 
-        crwd_base_url = self.crwd_base_url
-        crwd_client_id = self.crwd_client_id
-        crwd_client_secret = self.crwd_client_secret
         crwd_session = requests.session()
         crwd_session.verify = True
         
-        crwd_payload = {'client_id': crwd_client_id, 'client_secret': crwd_client_secret}
+        crwd_payload = {'client_id': self.crwd_client_id, 'client_secret': self.crwd_client_secret}
 
-        crwd_api_response = crwd_session.post(crwd_base_url + '/oauth2/token', data=crwd_payload)
+        crwd_api_response = crwd_session.post(self.crwd_base_url + '/oauth2/token', data=crwd_payload)
 
         if(crwd_api_response.status_code == 201):
 
@@ -224,7 +238,7 @@ class intel_collector:
 
             crwd_params = {'type': indicator_type, 'value': indicator}
 
-            crwd_getdetailedinfo = crwd_session.get(crwd_base_url + '/indicators/entities/iocs/v1', params=crwd_params)
+            crwd_getdetailedinfo = crwd_session.get(self.crwd_base_url + '/indicators/entities/iocs/v1', params=crwd_params)
 
             if(crwd_getdetailedinfo.status_code == 200):
                 event_array = json.loads(crwd_getdetailedinfo.text)['resources']
@@ -238,12 +252,10 @@ class intel_collector:
 
     def echotrail_hash(self, hash:str):
 
-        echotrail_base_url = self.echotrail_base_url
-        echotrail_api_key = self.echotrail_api_key
         echotrail_session = requests.session()
         echotrail_session.verify = True
-        echotrail_session.headers = {'X-Api-Key':echotrail_api_key,'Content-Type':'application/json'}
-        echotrail_api_response = echotrail_session.get(echotrail_base_url + hash,headers=echotrail_session.headers)
+        echotrail_session.headers = {'X-Api-Key':self.echotrail_api_key,'Content-Type':'application/json'}
+        echotrail_api_response = echotrail_session.get(self.echotrail_base_url + hash,headers=echotrail_session.headers)
 
         if(echotrail_api_response.status_code == 200):
             event_array = json.loads(echotrail_api_response.text)
@@ -259,19 +271,17 @@ class intel_collector:
 
     def etintel_domain(self, domain: str):
 
-        etintel_base_url = self.etintel_base_url
-        etintel_api_key = self.etintel_api_key
         etintel_session = requests.session()
         etintel_session.verify = True
         
-        etintel_ips_response = etintel_session.get((etintel_base_url + 'domains/' + domain + '/ips'), headers={'Authorization': etintel_api_key})
-        etintel_events_response = etintel_session.get((etintel_base_url + 'domains/' + domain + '/events'), headers={'Authorization': etintel_api_key})
-        etintel_geoloc_response = etintel_session.get((etintel_base_url + 'domains/' + domain + '/geoloc'), headers={'Authorization': etintel_api_key})
-        etintel_nameservers_response = etintel_session.get((etintel_base_url + 'domains/' + domain + '/nameservers'), headers={'Authorization': etintel_api_key})
-        etintel_reputation_response = etintel_session.get((etintel_base_url + 'domains/' + domain + '/reputation'), headers={'Authorization': etintel_api_key})
-        etintel_samples_response = etintel_session.get((etintel_base_url + 'domains/' + domain + '/samples'), headers={'Authorization': etintel_api_key})
-        etintel_urls_response = etintel_session.get((etintel_base_url + 'domains/' + domain + '/urls'), headers={'Authorization': etintel_api_key})
-        etintel_whois_response = etintel_session.get((etintel_base_url + 'domains/' + domain + '/whois'), headers={'Authorization': etintel_api_key})
+        etintel_ips_response = etintel_session.get((self.etintel_base_url + 'domains/' + domain + '/ips'), headers={'Authorization': self.etintel_api_key})
+        etintel_events_response = etintel_session.get((self.etintel_base_url + 'domains/' + domain + '/events'), headers={'Authorization': self.etintel_api_key})
+        etintel_geoloc_response = etintel_session.get((self.etintel_base_url + 'domains/' + domain + '/geoloc'), headers={'Authorization': self.etintel_api_key})
+        etintel_nameservers_response = etintel_session.get((self.etintel_base_url + 'domains/' + domain + '/nameservers'), headers={'Authorization': self.etintel_api_key})
+        etintel_reputation_response = etintel_session.get((self.etintel_base_url + 'domains/' + domain + '/reputation'), headers={'Authorization': self.etintel_api_key})
+        etintel_samples_response = etintel_session.get((self.etintel_base_url + 'domains/' + domain + '/samples'), headers={'Authorization': self.etintel_api_key})
+        etintel_urls_response = etintel_session.get((self.etintel_base_url + 'domains/' + domain + '/urls'), headers={'Authorization': self.etintel_api_key})
+        etintel_whois_response = etintel_session.get((self.etintel_base_url + 'domains/' + domain + '/whois'), headers={'Authorization': self.etintel_api_key})
     
         if "[]" not in etintel_ips_response.text:
             event_array = json.loads(etintel_ips_response.text)['response']
@@ -379,17 +389,15 @@ class intel_collector:
 
     def etintel_ip(self, ip: str):
         
-        etintel_base_url = self.etintel_base_url
-        etintel_api_key = self.etintel_api_key
         etintel_session = requests.session()
         etintel_session.verify = True
         
-        etintel_domains_response = etintel_session.get((etintel_base_url + 'ips/' + ip + '/domains'), headers={'Authorization': etintel_api_key})
-        etintel_events_response = etintel_session.get((etintel_base_url + 'ips/' + ip + '/events'), headers={'Authorization': etintel_api_key})
-        etintel_geoloc_response = etintel_session.get((etintel_base_url + 'ips/' + ip + '/geoloc'), headers={'Authorization': etintel_api_key})
-        etintel_reputation_response = etintel_session.get((etintel_base_url + 'ips/' + ip + '/reputation'), headers={'Authorization': etintel_api_key})
-        etintel_samples_response = etintel_session.get((etintel_base_url + 'ips/' + ip + '/samples'), headers={'Authorization': etintel_api_key})
-        etintel_urls_response = etintel_session.get((etintel_base_url + 'ips/' + ip + '/urls'), headers={'Authorization': etintel_api_key})
+        etintel_domains_response = etintel_session.get((self.etintel_base_url + 'ips/' + ip + '/domains'), headers={'Authorization': self.etintel_api_key})
+        etintel_events_response = etintel_session.get((self.etintel_base_url + 'ips/' + ip + '/events'), headers={'Authorization': self.etintel_api_key})
+        etintel_geoloc_response = etintel_session.get((self.etintel_base_url + 'ips/' + ip + '/geoloc'), headers={'Authorization': self.etintel_api_key})
+        etintel_reputation_response = etintel_session.get((self.etintel_base_url + 'ips/' + ip + '/reputation'), headers={'Authorization': self.etintel_api_key})
+        etintel_samples_response = etintel_session.get((self.etintel_base_url + 'ips/' + ip + '/samples'), headers={'Authorization': self.etintel_api_key})
+        etintel_urls_response = etintel_session.get((self.etintel_base_url + 'ips/' + ip + '/urls'), headers={'Authorization': self.etintel_api_key})
 
         if "[]" not in etintel_domains_response.text:
             event_array = json.loads(etintel_domains_response.text)['response']
@@ -471,16 +479,14 @@ class intel_collector:
     
     def etintel_hash(self, hash: str):
         
-        etintel_base_url = self.etintel_base_url
-        etintel_api_key = self.etintel_api_key
         etintel_session = requests.session()
         etintel_session.verify = True
         
-        etintel_samples_response = etintel_session.get((etintel_base_url + 'samples/' + hash), headers={'Authorization': etintel_api_key})
-        etintel_connections_response = etintel_session.get((etintel_base_url + 'samples/' + hash + '/connections'), headers={'Authorization': etintel_api_key})
-        etintel_dnslookups_response = etintel_session.get((etintel_base_url + 'samples/' + hash + '/dns'), headers={'Authorization': etintel_api_key})
-        etintel_httpreqs_response = etintel_session.get((etintel_base_url + 'samples/' + hash + '/http'), headers={'Authorization': etintel_api_key})
-        etintel_events_response = etintel_session.get((etintel_base_url + 'samples/' + hash + '/events'), headers={'Authorization': etintel_api_key})
+        etintel_samples_response = etintel_session.get((self.etintel_base_url + 'samples/' + hash), headers={'Authorization': self.etintel_api_key})
+        etintel_connections_response = etintel_session.get((self.etintel_base_url + 'samples/' + hash + '/connections'), headers={'Authorization': self.etintel_api_key})
+        etintel_dnslookups_response = etintel_session.get((self.etintel_base_url + 'samples/' + hash + '/dns'), headers={'Authorization': self.etintel_api_key})
+        etintel_httpreqs_response = etintel_session.get((self.etintel_base_url + 'samples/' + hash + '/http'), headers={'Authorization': self.etintel_api_key})
+        etintel_events_response = etintel_session.get((self.etintel_base_url + 'samples/' + hash + '/events'), headers={'Authorization': self.etintel_api_key})
 
         if "[]" not in etintel_samples_response.text:
             event_array = json.loads(etintel_samples_response.text)['response']
@@ -549,13 +555,11 @@ class intel_collector:
 
     def filescan_hash(self, hash: str, indicator_type: str):
 
-        filescan_base_url = self.filescan_base_url
-        filescan_api_key = self.filescan_api_key
         filescan_session = requests.session()
         filescan_session.verify = True
-        filescan_session.headers = {'X-Api-Key':filescan_api_key,'Content-Type':'application/json'}
+        filescan_session.headers = {'X-Api-Key':self.filescan_api_key,'Content-Type':'application/json'}
         
-        filescan_api_response = filescan_session.get(filescan_base_url + 'reports/search?' + indicator_type + '=' + hash,headers=filescan_session.headers)
+        filescan_api_response = filescan_session.get(self.filescan_base_url + 'reports/search?' + indicator_type + '=' + hash,headers=filescan_session.headers)
 
         if(filescan_api_response.status_code == 200):
             event_array = json.loads(filescan_api_response.text)
@@ -573,12 +577,10 @@ class intel_collector:
 
     def greynoise(self, ip: str):
 
-        greynoise_base_url = self.greynoise_base_url
-        greynoise_api_key = self.greynoise_api_key
         greynoise_session = requests.session()
         greynoise_session.verify = True
 
-        greynoise_response = greynoise_session.get((greynoise_base_url + ip), headers={'key': greynoise_api_key})
+        greynoise_response = greynoise_session.get((self.greynoise_base_url + ip), headers={'key': self.greynoise_api_key})
 
         grey_array = json.loads(greynoise_response.text)
         print(ip + ' response from GreyNoise')
@@ -600,14 +602,11 @@ class intel_collector:
     
     def hybrid_hash(self, hash: str):
 
-        hybrid_base_url = self.hybrid_base_url
-        hybrid_api_key = self.hybrid_api_key
-
         hybrid_session = requests.session()
         hybrid_session.verify = True
-        hybrid_session.headers = {'api-key':hybrid_api_key,'user-agent':'Falcon Sandbox','accept':'application/json','Content-Type':'application/x-www-form-urlencoded'}
+        hybrid_session.headers = {'api-key':self.hybrid_api_key,'user-agent':'Falcon Sandbox','accept':'application/json','Content-Type':'application/x-www-form-urlencoded'}
 
-        hybrid_api_response = hybrid_session.post(hybrid_base_url + 'search/hash','hash=' + hash)
+        hybrid_api_response = hybrid_session.post(self.hybrid_base_url + 'search/hash','hash=' + hash)
 
         if(hybrid_api_response.status_code == 200):
             event_array = json.loads(hybrid_api_response.text)
@@ -624,21 +623,16 @@ class intel_collector:
 
     def msft_domain(self, domain: str):
 
-        msft_base_url = self.msft_base_url
-        msft_app_url = self.msft_app_url
-        msft_tenant_id = self.msft_tenant_id
-        msft_client_id = self.msft_client_id
-        msft_client_secret = self.msft_client_secret
         msft_session = requests.session()
         
-        msft_payload = {'resource': msft_app_url,
-                   'client_id': msft_client_id,
-                   'client_secret': msft_client_secret,
+        msft_payload = {'resource': self.msft_app_url,
+                   'client_id': self.msft_client_id,
+                   'client_secret': self.msft_client_secret,
                    'grant_type': 'client_credentials'}
 
         msft_data = urllib.parse.urlencode(msft_payload).encode("utf-8")
 
-        msft_url = msft_base_url % msft_tenant_id
+        msft_url = self.msft_base_url % self.msft_tenant_id
 
         msft_request = urllib.request.Request(msft_url, msft_data)
         msft_response = urllib.request.urlopen(msft_request)
@@ -653,7 +647,7 @@ class intel_collector:
 
             msft_session.headers = msft_session_headers
 
-            msft_domain_stats = msft_session.get(msft_app_url + '/api/domains/' + domain + '/stats')
+            msft_domain_stats = msft_session.get(self.msft_app_url + '/api/domains/' + domain + '/stats')
 
             if(msft_domain_stats.status_code == 200):
                 event_array = json.loads(msft_domain_stats.text)
@@ -672,21 +666,16 @@ class intel_collector:
 
     def msft_hash(self, hash: str):
 
-        msft_base_url = self.msft_base_url
-        msft_app_url = self.msft_app_url
-        msft_tenant_id = self.msft_tenant_id
-        msft_client_id = self.msft_client_id
-        msft_client_secret = self.msft_client_secret
         msft_session = requests.session()
         
-        msft_payload = {'resource': msft_app_url,
-                   'client_id': msft_client_id,
-                   'client_secret': msft_client_secret,
+        msft_payload = {'resource': self.msft_app_url,
+                   'client_id': self.msft_client_id,
+                   'client_secret': self.msft_client_secret,
                    'grant_type': 'client_credentials'}
 
         msft_data = urllib.parse.urlencode(msft_payload).encode("utf-8")
 
-        msft_url = msft_base_url % msft_tenant_id
+        msft_url = self.msft_base_url % self.msft_tenant_id
 
         msft_request = urllib.request.Request(msft_url, msft_data)
         msft_response = urllib.request.urlopen(msft_request)
@@ -701,8 +690,8 @@ class intel_collector:
 
             msft_session.headers = msft_session_headers
 
-            msft_globalfile_stats = msft_session.get(msft_app_url + '/api/files/' + hash)
-            msft_orgfile_stats = msft_session.get(msft_app_url + '/api/files/' + hash + '/stats')
+            msft_globalfile_stats = msft_session.get(self.msft_app_url + '/api/files/' + hash)
+            msft_orgfile_stats = msft_session.get(self.msft_app_url + '/api/files/' + hash + '/stats')
 
             if(msft_globalfile_stats.status_code == 200):
                 event_array = json.loads(msft_globalfile_stats.text)
@@ -734,21 +723,16 @@ class intel_collector:
 
     def msft_ip(self, ip: str):
 
-        msft_base_url = self.msft_base_url
-        msft_app_url = self.msft_app_url
-        msft_tenant_id = self.msft_tenant_id
-        msft_client_id = self.msft_client_id
-        msft_client_secret = self.msft_client_secret
         msft_session = requests.session()
         
-        msft_payload = {'resource': msft_app_url,
-                   'client_id': msft_client_id,
-                   'client_secret': msft_client_secret,
+        msft_payload = {'resource': self.msft_app_url,
+                   'client_id': self.msft_client_id,
+                   'client_secret': self.msft_client_secret,
                    'grant_type': 'client_credentials'}
 
         msft_data = urllib.parse.urlencode(msft_payload).encode("utf-8")
 
-        msft_url = msft_base_url % msft_tenant_id
+        msft_url = self.msft_base_url % self.msft_tenant_id
 
         msft_request = urllib.request.Request(msft_url, msft_data)
         msft_response = urllib.request.urlopen(msft_request)
@@ -763,7 +747,7 @@ class intel_collector:
 
             msft_session.headers = msft_session_headers
 
-            msft_ip_stats = msft_session.get(msft_app_url + '/api/ips/' + ip + '/stats')
+            msft_ip_stats = msft_session.get(self.msft_app_url + '/api/ips/' + ip + '/stats')
 
             if(msft_ip_stats.status_code == 200):
                 event_array = json.loads(msft_ip_stats.text)
@@ -780,14 +764,35 @@ class intel_collector:
 
             msft_session.close()
     
+    def netlas_iocs(self, indicator: str):
+
+        netlas_request = self.netlas_base_url + '/api/responses/?q=host%3A' + indicator
+        netlas_response = requests.get(netlas_request, headers={'X-API-Key':self.netlas_api_key})
+        
+        if "[]" not in netlas_response.text:     
+            event_array = json.loads(netlas_response.text)['items']
+            print(indicator + ' response from Netlas.io')
+            for e in event_array:
+                d = json.dumps(e)
+                d = 'Netlas,' + d
+                d = d.replace('{', '')
+                d = d.replace('}', '')
+                d = d.replace('[', '')
+                d = d.replace(']', '')
+                d = d.replace('"', '')
+                d = d.replace('http:', 'http|')
+                d = d.replace('https:', 'https|')
+                d = d.replace(':', ',')
+                d = d.replace('http|', 'http:')
+                d = d.replace('https|', 'https:')               
+                print(d, file=open(self.flat_output_file, "a"))
+
     def onyphe_domain(self, domain: str):
 
-        onyphe_summary_base_url = self.onyphe_summary_base_url
-        onyphe_api_key = self.onyphe_api_key
         onyphe_session = requests.session()
         onyphe_session.verify = True
 
-        onyphe_summary_response = onyphe_session.get((onyphe_summary_base_url + 'domain/' + domain), headers={'Authorization': onyphe_api_key})
+        onyphe_summary_response = onyphe_session.get((self.onyphe_summary_base_url + 'domain/' + domain), headers={'Authorization': self.onyphe_api_key})
 
         if "[]" not in onyphe_summary_response.text:
             event_array = json.loads(onyphe_summary_response.text)['results']
@@ -807,12 +812,10 @@ class intel_collector:
 
     def onyphe_ip(self, ip: str):
 
-        onyphe_summary_base_url = self.onyphe_summary_base_url
-        onyphe_api_key = self.onyphe_api_key
         onyphe_session = requests.session()
         onyphe_session.verify = True
 
-        onyphe_summary_response = onyphe_session.get((onyphe_summary_base_url + 'ip/' + ip), headers={'Authorization': onyphe_api_key})
+        onyphe_summary_response = onyphe_session.get((self.onyphe_summary_base_url + 'ip/' + ip), headers={'Authorization': self.onyphe_api_key})
 
         if "[]" not in onyphe_summary_response.text:
             event_array = json.loads(onyphe_summary_response.text)['results']
@@ -832,8 +835,7 @@ class intel_collector:
 
     def shodan_domain(self, domain: str):
 
-        shodan_api_key = self.shodan_api_key
-        shodan_api = shodan.Shodan(shodan_api_key)       
+        shodan_api = shodan.Shodan(self.shodan_api_key)       
 
         try:
             shodan_result = shodan_api.dns.domain_info(domain)
@@ -855,8 +857,7 @@ class intel_collector:
 
     def shodan_ip(self, ip: str):
 
-        shodan_api_key = self.shodan_api_key
-        shodan_api = shodan.Shodan(shodan_api_key)       
+        shodan_api = shodan.Shodan(self.shodan_api_key)       
 
         try:
             shodan_result = shodan_api.host(ip)
@@ -959,12 +960,11 @@ class intel_collector:
                 print(d, file=open(self.flat_output_file, "a"))
 
     def triage_iocs(self, indicator: str, indicator_type: str):
-        triage_base_url = self.triage_base_url
-        triage_api_key = self.triage_api_key
+
         triage_session = requests.session()
         triage_session.verify = True
-        triage_session.headers = {'Authorization':'Bearer ' + triage_api_key,'Content-Type':'application/json'}
-        triage_api_response = triage_session.get(triage_base_url + 'search?query=' + indicator_type + ':' + indicator,headers=triage_session.headers)
+        triage_session.headers = {'Authorization':'Bearer ' + self.triage_api_key,'Content-Type':'application/json'}
+        triage_api_response = triage_session.get(self.triage_base_url + 'search?query=' + indicator_type + ':' + indicator,headers=triage_session.headers)
 
         if((triage_api_response.status_code == 200) and ("null" not in triage_api_response.text)):
             event_array = json.loads(triage_api_response.text)
@@ -982,16 +982,15 @@ class intel_collector:
 
     def urlhaus_iocs(self, indicator: str, indicator_type: str):
 
-        urlhaus_base_url = self.urlhaus_base_url
         urlhaus_session = requests.session()
         urlhaus_session.verify = True
 
         urlhaus_data = {indicator_type:indicator}
         
         if(indicator_type == 'host'):
-            urlhaus_api_response = urlhaus_session.post(urlhaus_base_url + 'host/', urlhaus_data, headers=urlhaus_session.headers)
+            urlhaus_api_response = urlhaus_session.post(self.urlhaus_base_url + 'host/', urlhaus_data, headers=urlhaus_session.headers)
         else:
-            urlhaus_api_response = urlhaus_session.post(urlhaus_base_url + 'payload/', urlhaus_data, headers=urlhaus_session.headers)
+            urlhaus_api_response = urlhaus_session.post(self.urlhaus_base_url + 'payload/', urlhaus_data, headers=urlhaus_session.headers)
 
         if((urlhaus_api_response.status_code == 200) and ("no_results" not in urlhaus_api_response.text)):
             event_array = json.loads(urlhaus_api_response.text)
@@ -1006,12 +1005,11 @@ class intel_collector:
             print(d, file=open(self.flat_output_file, "a"))
     
     def urlscan_domain(self, domain: str):
-        urlscan_base_url = self.urlscan_base_url
-        urlscan_api_key = self.urlscan_api_key
+
         urlscan_session = requests.session()
         urlscan_session.verify = True
-        urlscan_session.headers = {'API-Key':urlscan_api_key,'Content-Type':'application/json'}
-        urlscan_api_response = urlscan_session.get(urlscan_base_url + 'search/?q=domain:' + domain,headers=urlscan_session.headers)
+        urlscan_session.headers = {'API-Key':self.urlscan_api_key,'Content-Type':'application/json'}
+        urlscan_api_response = urlscan_session.get(self.urlscan_base_url + 'search/?q=domain:' + domain,headers=urlscan_session.headers)
 
         if(urlscan_api_response.status_code == 200):
             event_array = json.loads(urlscan_api_response.text)
@@ -1031,13 +1029,11 @@ class intel_collector:
 
     def urlscan_hash(self, hash: str):
 
-        urlscan_base_url = self.urlscan_base_url
-        urlscan_api_key = self.urlscan_api_key
         urlscan_session = requests.session()
         urlscan_session.verify = True
-        urlscan_session.headers = {'API-Key':urlscan_api_key,'Content-Type':'application/json'}
+        urlscan_session.headers = {'API-Key':self.urlscan_api_key,'Content-Type':'application/json'}
 
-        urlscan_api_response = urlscan_session.get(urlscan_base_url + 'search/?q=hash:' + hash,headers=urlscan_session.headers)
+        urlscan_api_response = urlscan_session.get(self.urlscan_base_url + 'search/?q=hash:' + hash,headers=urlscan_session.headers)
 
         if((urlscan_api_response.status_code == 200) and ("0" not in urlscan_api_response.text)):
             event_array = json.loads(urlscan_api_response.text)
@@ -1055,13 +1051,11 @@ class intel_collector:
 
     def urlscan_ip(self, ip: str):
 
-        urlscan_base_url = self.urlscan_base_url
-        urlscan_api_key = self.urlscan_api_key
         urlscan_session = requests.session()
         urlscan_session.verify = True
-        urlscan_session.headers = {'API-Key':urlscan_api_key,'Content-Type':'application/json'}
+        urlscan_session.headers = {'API-Key':self.urlscan_api_key,'Content-Type':'application/json'}
 
-        urlscan_api_response = urlscan_session.get(urlscan_base_url + 'search/?q=ip:' + ip,headers=urlscan_session.headers)
+        urlscan_api_response = urlscan_session.get(self.urlscan_base_url + 'search/?q=ip:' + ip,headers=urlscan_session.headers)
 
         if(urlscan_api_response.status_code == 200):
             event_array = json.loads(urlscan_api_response.text)
@@ -1081,14 +1075,12 @@ class intel_collector:
 
     def virustotal_domain(self, domain: str):
 
-        virustotal_base_url = self.virustotal_base_url
-        virustotal_api_key = self.virustotal_api_key
         virustotal_session = requests.session()
         virustotal_session.verify = True
         
-        virustotal_commfiles_response = virustotal_session.get((virustotal_base_url + 'domains/' + domain + '/communicating_files'), headers={'x-apikey': virustotal_api_key})
-        virustotal_resolutions_response = virustotal_session.get((virustotal_base_url + 'domains/' + domain + '/resolutions'), headers={'x-apikey': virustotal_api_key})
-        virustotal_whois_response = virustotal_session.get((virustotal_base_url + 'domains/' + domain + '/historical_whois'), headers={'x-apikey': virustotal_api_key})
+        virustotal_commfiles_response = virustotal_session.get((self.virustotal_base_url + 'domains/' + domain + '/communicating_files'), headers={'x-apikey': self.virustotal_api_key})
+        virustotal_resolutions_response = virustotal_session.get((self.virustotal_base_url + 'domains/' + domain + '/resolutions'), headers={'x-apikey': self.virustotal_api_key})
+        virustotal_whois_response = virustotal_session.get((self.virustotal_base_url + 'domains/' + domain + '/historical_whois'), headers={'x-apikey': self.virustotal_api_key})
 
         if "[]" not in virustotal_commfiles_response.text:    
             event_array = json.loads(virustotal_commfiles_response.text)
@@ -1134,13 +1126,11 @@ class intel_collector:
 
     def virustotal_ip(self, ip: str):
 
-        virustotal_base_url = self.virustotal_base_url
-        virustotal_api_key = self.virustotal_api_key
         virustotal_session = requests.session()
         virustotal_session.verify = True
         
-        virustotal_whois_response = virustotal_session.get((virustotal_base_url + 'ip_addresses/' + ip + '/historical_whois'), headers={'x-apikey': virustotal_api_key})
-        virustotal_commfiles_response = virustotal_session.get((virustotal_base_url + 'ip_addresses/' + ip + '/communicating_files'), headers={'x-apikey': virustotal_api_key})
+        virustotal_whois_response = virustotal_session.get((self.virustotal_base_url + 'ip_addresses/' + ip + '/historical_whois'), headers={'x-apikey': self.virustotal_api_key})
+        virustotal_commfiles_response = virustotal_session.get((self.virustotal_base_url + 'ip_addresses/' + ip + '/communicating_files'), headers={'x-apikey': self.virustotal_api_key})
 
         if "[]" not in virustotal_commfiles_response.text:    
             event_array = json.loads(virustotal_commfiles_response.text)
@@ -1172,13 +1162,11 @@ class intel_collector:
 
     def virustotal_hash(self, hash: str):
 
-        virustotal_base_url = self.virustotal_base_url
-        virustotal_api_key = self.virustotal_api_key
         virustotal_session = requests.session()
         virustotal_session.verify = True
 
-        virustotal_behavior_response = virustotal_session.get((virustotal_base_url + 'files/' + hash + '/behaviour_summary'), headers={'x-apikey': virustotal_api_key})
-        virustotal_file_response = virustotal_session.get((virustotal_base_url + 'files/' + hash), headers={'x-apikey': virustotal_api_key})
+        virustotal_behavior_response = virustotal_session.get((self.virustotal_base_url + 'files/' + hash + '/behaviour_summary'), headers={'x-apikey': self.virustotal_api_key})
+        virustotal_file_response = virustotal_session.get((self.virustotal_base_url + 'files/' + hash), headers={'x-apikey': self.virustotal_api_key})
 
         if "[]" not in virustotal_file_response.text:    
             event_array = json.loads(virustotal_file_response.text)

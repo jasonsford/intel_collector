@@ -8,14 +8,12 @@ CrowdStrike Falcon Intel and Microsoft Defender for Endpoint customers can also 
 their tenant for the presence of indicators within their own environment.
 
 ## Supported APIs
-
+### Free Resources
 Circl.lu (hashlookup.circl.lu)
-<br>CrowdStrike Falcon Intel (api.crowdstrike.com)
-<br>Emerging Threats Intelligence (api.emergingthreats.net)
 <br>Filescan.io (filescan.io)
 <br>GreyNoise Community API (api.greynoise.io)
 <br>Hybrid Analysis (hybrid-analysis.com)
-<br>Microsoft Defender for Endpoint (api.securitycenter.windows.com)
+<br>Netlas (app.netlas.io)
 <br>Onyphe Free Tier (onyphe.io)
 <br>Shodan (shodan.io)
 <br>Sorbs (sorbs.net)
@@ -24,7 +22,12 @@ Circl.lu (hashlookup.circl.lu)
 <br>Triage (tria.ge)
 <br>Urlhaus (urlhaus-api.abuse.ch)
 <br>Urlscan.io (urlscan.io)
-<br>VirusTotal Free Tier (virustotal.com)
+<br>VirusTotal (virustotal.com)
+
+### Paid Resources
+CrowdStrike Falcon Intel (api.crowdstrike.com)
+<br>Emerging Threats Intelligence (api.emergingthreats.net)
+<br>Microsoft Defender for Endpoint (api.securitycenter.windows.com)
 
 ## Setting API keys
 
@@ -53,14 +56,17 @@ self.msft_tenant_id = 'your M365 tenant id'
 self.msft_client_id = 'your M365 client id'
 self.msft_client_secret = 'your M365 client secret'
 
+# Netlas.io
+self.netlas_api_key = 'your netlas api key'
+
 # Onyphe
-self.onyphe_api_key = 'apikey your onyphe api key'
+self.onyphe_api_key = 'apikey <your onyphe api key>'
 
 # Shodan
 self.shodan_api_key = 'your shodan api key'
 
 # Stalkphish
-self.stalkphish_api_key = 'your stalkphish api key'
+self.stalkphish_api_key = 'Token <your stalkphish api key>'
 
 # Tria.ge
 self.triage_api_key = 'your tria.ge api key'
@@ -81,6 +87,7 @@ find_domain
 
     self.etintel_domain(domain)                 # Emerging Threats
     self.msft_domain(domain)                    # Microsoft Defender for Endpoint
+    self.netlas_iocs(domain)                    # Netlas.io
     self.onyphe_domain(domain)                  # Onyphe
     self.shodan_domain(domain)                  # Shodan
     self.triage_iocs(domain,indicator_type)     # Tria.ge
@@ -108,6 +115,7 @@ find_ip
     self.etintel_ip(ip)                         # Emerging Threats
     self.greynoise(ip)                          # GreyNoise
     self.msft_ip(ip)                            # Microsoft Defender for Endpoint
+    self.netlas_iocs(ip)                        # Netlas.io
     self.onyphe_ip(ip)                          # Onyphe
     self.shodan_ip(ip)                          # Shodan
     self.sorbs_ip(ip)                           # Sorbs
