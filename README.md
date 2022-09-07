@@ -61,13 +61,13 @@ msft_client_secret = 'your M365 client secret'
 netlas_api_key 'your netlas api key'
 
 # onyphe.py (Onyphe)
-onyphe_api_key = 'apikey your onyphe api key'
+onyphe_api_key = 'your onyphe api key'
 
 # shodanpy.py (Shodan)
 shodan_api_key = 'your shodan api key'
 
 # stalkphish.py (Stalkphish)
-stalkphish_api_key = 'Token your stalkphish api key'
+stalkphish_api_key = 'your stalkphish api key'
 
 # triage.py (Tria.ge)
 triage_api_key = 'your tria.ge api key'
