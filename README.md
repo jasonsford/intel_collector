@@ -1,10 +1,10 @@
 # intel_collector
 
-intel_collector is a Python library to query various sources of threat intelligence
-for data on domains, file  hashes, and IP addresses. Responses that do not return
-empty results are reformatted as comma separated values and written to CSV.
+intel collector is a Python library to query various sources of threat intelligence
+for data on domains, file hashes, and IP addresses. Responses are returned in JSON
+format and written to CSV.
 
-CrowdStrike Falcon Intel and Microsoft Defender for Endpoint customers can also query
+CrowdStrike Falcon and Microsoft Defender for Endpoint customers can also query
 their tenant for the presence of indicators within their own environment.
 
 ## Supported APIs
@@ -16,9 +16,8 @@ Circl.lu (hashlookup.circl.lu)
 <br>Netlas (app.netlas.io)
 <br>Onyphe Free Tier (onyphe.io)
 <br>Shodan (shodan.io)
-<br>Sorbs (sorbs.net)
-<br>Spamhaus Zen (spamhaus.org)
 <br>Stalkphish (stalkphish.io)
+<br>Stratosphere IPS (stratosphereips.org)
 <br>Triage (tria.ge)
 <br>Urlhaus (urlhaus-api.abuse.ch)
 <br>Urlscan.io (urlscan.io)
@@ -31,100 +30,123 @@ CrowdStrike Falcon Intel (api.crowdstrike.com)
 
 ## Setting API keys
 
+API keys are set from within the library for each intel source.
+
 ```python
-# CrowdStrike
-self.crwd_client_id = 'your crowdstrike api client id'
-self.crwd_client_secret = 'your crowdstrike api client secret'
+# crwd.py (CrowdStrike)
+crwd_client_id = 'your crowdstrike api client id'
+crwd_client_secret = 'your crowdstrike api client secret'
 
-# Echotrail.io
-self.echotrail_api_key = 'your echotrail api key'
+# echotrail.py (Echotrail.io)
+echotrail_api_key = 'your echotrail api key'
 
-# Emerging Threats Intelligence (Proofpoint)
-self.etintel_api_key = 'your emerging threats intelligence api key'
+# etintel.py (Emerging Threats Intelligence)
+etintel_api_key = 'your emerging threats intelligence api key'
 
-# Filescan.io
-self.filescan_api_key = 'your filescan.io api key'
+# filescan.py (Filescan.io)
+filescan_api_key = 'your filescan.io api key'
 
-# GreyNoise
-self.greynoise_api_key = 'your greynoise community api key'
+# greynoise.py (GreyNoise.io)
+greynoise_api_key = 'your greynoise community api key'
 
-# Hybrid Analysis
-self.hybrid_api_key = 'your hybrid analysis api key'
+# hybrid.py (Hybrid Analysis)
+hybrid_api_key = 'your hybrid analysis api key'
 
-# Microsoft Defender for Endpoint
-self.msft_tenant_id = 'your M365 tenant id'
-self.msft_client_id = 'your M365 client id'
-self.msft_client_secret = 'your M365 client secret'
+# msde.py (Microsoft Defender for Endpoint)
+msft_tenant_id = 'your M365 tenant id'
+msft_client_id = 'your M365 client id'
+msft_client_secret = 'your M365 client secret'
 
-# Netlas.io
-self.netlas_api_key = 'your netlas api key'
+# netlas.py (Netlas.io)
+netlas_api_key 'your netlas api key'
 
-# Onyphe
-self.onyphe_api_key = 'apikey <your onyphe api key>'
+# onyphe.py (Onyphe)
+onyphe_api_key = 'apikey your onyphe api key'
 
-# Shodan
-self.shodan_api_key = 'your shodan api key'
+# shodanpy.py (Shodan)
+shodan_api_key = 'your shodan api key'
 
-# Stalkphish
-self.stalkphish_api_key = 'Token <your stalkphish api key>'
+# stalkphish.py (Stalkphish)
+stalkphish_api_key = 'Token your stalkphish api key'
 
-# Tria.ge
-self.triage_api_key = 'your tria.ge api key'
+# triage.py (Tria.ge)
+triage_api_key = 'your tria.ge api key'
 
-# Urlscan.io
-self.urlscan_api_key = 'your urlscan.io api key'
+# urlscan.py (Urlscan.io)
+urlscan_api_key = 'your urlscan.io api key'
 
-# VirusTotal
-self.virustotal_api_key = 'your virustotal api key'
+# virustotal.py (VirusTotal)
+virustotal_api_key = 'your virustotal api key'
 ```
 
 ## Disabling Modules
 
-All modules are enabled by default. Modules within each function can be disabled if you don't have an API key or don't wish to utilize them. Add # to beginning of these lines as needed:     
+All modules are enabled by default. Modules within each function can be disabled if you don't have an API key or don't wish to utilize them. Add # to the beginning of these lines as needed:     
 
 ```python
+
+# Free Resources 
+import circl
+import echotrail
+import filescan
+import greynoise
+import hybrid
+import netlas
+import onyphe
+import shodanpy
+import stalkphish
+import strato
+import triage
+import urlhaus
+import urlscan
+import virustotal
+
+# Paid Resources
+import crwd
+import msde
+import etintel
+
 find_domain
 
-    self.etintel_domain(domain)                 # Emerging Threats
-    self.msft_domain(domain)                    # Microsoft Defender for Endpoint
-    self.netlas_iocs(domain)                    # Netlas.io
-    self.onyphe_domain(domain)                  # Onyphe
-    self.shodan_domain(domain)                  # Shodan
-    self.triage_iocs(domain,indicator_type)     # Tria.ge
-    self.urlhaus_iocs(domain,indicator_type)    # Urlhaus
-    self.urlscan_domain(domain)                 # Urlscan.io
-    self.virustotal_domain(domain)              # VirusTotal
+    results["Emerging Threats"] = etintel.domain(domain)        # Emerging Threats
+    results["Microsoft"] = msde.domain(domain)                  # Microsoft Defender for Endpoint
+    results["Netlas"] = netlas.iocs(domain)                     # Netlas.io
+    results["Onyphe"] = onyphe.domain(domain)                   # Onyphe
+    results["Shodan"] = shodanpy.domain(domain)                 # Shodan
+    results["Tria.ge"] = triage.iocs(domain,'domain')           # Tria.ge
+    results["URLhaus"] = urlhaus.iocs(domain,'host')            # Urlhaus
+    results["URLScan"] = urlscan.domain(domain)                 # Urlscan.io
+    results["VirusTotal"] = virustotal.domain(domain)           # VirusTotal
 
 find_hash
 
-    self.circl_hash(hash,indicator_type)        # Circl.lu
-    self.crwd_iocs(hash,indicator_type)         # CrowdStrike Falcon
-    self.echotrail_hash(hash,indicator_type)    # Echotrail.io
-    self.etintel_hash(hash)                     # Emerging Threats
-    self.filescan_hash(hash,indicator_type)     # Filescan.io
-    self.hybrid_hash(hash)                      # Hybrid Analysis
-    self.msft_hash(hash)                        # Microsoft Defender for Endpoint
-    self.triage_iocs(hash,indicator_type)       # Tria.ge
-    self.urlhaus_iocs(hash,indicator_type)      # Urlhaus
-    self.urlscan_hash(hash)                     # Urlscan.io
-    self.virustotal_hash(hash)                  # VirusTotal
+    results["Circl.lu"] = circl.hash(hash,'md5')         # Circl.lu
+    results["CrowdStrike"] = crwd.iocs(hash,'md5')       # CrowdStrike Falcon
+    results["Echotrail"] = echotrail.hash(hash)          # Echotrail.io
+    results["Emerging Threats"] = etintel.hash(hash)     # Emerging Threats
+    results["FileScan.io"] = filescan.hash(hash,'md5')   # Filescan.io
+    results["Hybrid Analysis"] = hybrid.hash(hash)       # Hybrid Analysis
+    results["Microsoft"] = msde.hash(hash)               # Microsoft Defender for Endpoint            
+    results["Tria.ge"] = triage.iocs(hash,'sha1')        # Tria.ge
+    results["URLhaus"] = urlhaus.iocs(hash,'sha256')     # Urlhaus
+    results["URLScan"] = urlscan.hash(hash)              # Urlscan.io
+    results["VirusTotal"] = virustotal.hash(hash)        # VirusTotal
 
 find_ip
 
-    self.crwd_iocs(ip,indicator_type)           # CrowdStrike Falcon
-    self.etintel_ip(ip)                         # Emerging Threats
-    self.greynoise(ip)                          # GreyNoise
-    self.msft_ip(ip)                            # Microsoft Defender for Endpoint
-    self.netlas_iocs(ip)                        # Netlas.io
-    self.onyphe_ip(ip)                          # Onyphe
-    self.shodan_ip(ip)                          # Shodan
-    self.sorbs_ip(ip)                           # Sorbs
-    self.spamhaus_ip(ip)                        # Spamhaus Zen
-    self.stalkphish_ip(ip)                      # Stalkphish
-    self.triage_iocs(ip,indicator_type)         # Tria.ge
-    self.urlhaus_iocs(ip,indicator_type)        # Urlhaus
-    self.urlscan_ip(ip)                         # Urlscan.io
-    self.virustotal_ip(ip)                      # VirusTotal
+    results["CrowdStrike"] = crwd.iocs(ip,'ipv4')        # CrowdStrike Falcon
+    results["Emerging Threats"] = etintel.ip(ip)         # Emerging Threats
+    results["GreyNoise"] = greynoise.ip(ip)              # GreyNoise
+    results["Microsoft"] = msde.ip(ip)                   # Microsoft Defender for Endpoint
+    results["Netlas"] = netlas.iocs(ip)                  # Netlas.io
+    results["Onyphe"] = onyphe.ip(ip)                    # Onyphe
+    results["Shodan"] = shodanpy.ip(ip)                  # Shodan
+    results["Stalkphish"] = stalkphish.ip(ip)            # Stalkphish
+    results["Stratosphere IPS"] = strato.ip(ip)          # Stratosphere IPS
+    results["Tria.ge"] = triage.iocs(ip,'ip')            # Tria.ge
+    results["URLhaus"] = urlhaus.iocs(ip,'host')         # Urlhaus
+    results["URLScan"] = urlscan.ip(ip)                  # Urlscan.io
+    results["VirusTotal"] = virustotal.ip(ip)            # VirusTotal
 ```
 
 ## Usage
@@ -166,29 +188,34 @@ go.find_hash('177f3c8a2623d4efb41b0020d680be83')
 go.find_domain('bkdata.vn')
 ```
 ```bash
-    bkdata.vn found in Onyphe - Summary
-    bkdata.vn found in Shodan
-    bkdata.vn found in VirusTotal - Resolutions
-    Results written to bkdata.vn_20220425_124237.csv
+    Found in Microsoft Defender for Endpoint - Domains
+    Found in Netlas.io
+    Found in Onyphe
+    Found in Shodan
+
 ```
 ```python
 go.find_hash('870c31aa344b2950d0ea4849a472dafed312ecee8aa212c47bf543668bbee8e9')
 ```
 ```bash
-    870c31aa344b2950d0ea4849a472dafed312ecee8aa212c47bf543668bbee8e9 response from Microsoft Defender - Global File Info
-    870c31aa344b2950d0ea4849a472dafed312ecee8aa212c47bf543668bbee8e9 response from VirusTotal - File Report
-    870c31aa344b2950d0ea4849a472dafed312ecee8aa212c47bf543668bbee8e9 response from VirusTotal - File Behavior Reports
-    Results written to 870c31aa344b2950d0ea4849a472dafed312ecee8aa212c47bf543668bbee8e9_20220426_123337.csv
+    Response from Echotrail.io
+    Found in Filescan.io
+    Found in Hybrid Analysis
+    Found in Microsoft Defender for Endpoint - Global File Stats
+    Found in Tria.ge
+    Found in VirusTotal - Files
 ```
 ```python
 go.find_ip('103.161.17.242')
 ```
 ```bash
-    103.161.17.242 found in ET Intel - Events
-    103.161.17.242 response from GreyNoise
-    103.161.17.242 found in Onyphe - Summary
-    103.161.17.242 found in Shodan
-    Results written to 103.161.17.242_20220425_124237.csv
+    Found in Emerging Threats - Events
+    Response from GreyNoise
+    Found in Microsoft Defender for Endpoint - IP Stats
+    Found in Onyphe
+    Found in Shodan
+    Found in Stalkphish
+    Response from URLscan.io
 ```
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue to discuss what you would like to change.

@@ -1,6 +1,25 @@
 # Changelog
 All notable changes to intel_collector will be documented here.
 
+## [2.0.0] - 7 September 2022
+### Added
+Support for:
+- Stratosphere IPS | Czech Technical University (IPs) - Thank you to @bry_campbell for the suggestion :)
+
+### Changed
+- Intel sources now have their own libraries. API keys are set within each individual library.
+- Individual libraries no longer parse JSON data to remove characters and format strings. Everything is returned as JSON
+- Intel Collector will store results of each API call into a dictionary (results) with a key that corresponds to the API
+- CLI output has been condensed. API calls that return a response will provide one of two outputs:
+    - 'Found in <source>'
+    - 'Response from <source>'
+- validate.py library updated with new regex to check domain name submissions to ensure only top level domains (TLDs) are accepted
+
+### Removed
+Support for:
+- Sorbs
+- Spamhaus Zen
+
 ## [1.0.4] - 30 August 2022
 ### Added
 Support for:

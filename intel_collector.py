@@ -1,168 +1,140 @@
 # intel_collector.py
 #
 # intel_collector is a Python library to query various sources of threat intelligence
-# for data on domains, file hashes, and IP addresses. Responses that do not return 
-# empty results are reformatted as comma separated values and written to CSV.
+# for data on domains, file hashes, and IP addresses. Responses are returned in JSON
+# format and written to CSV.
 #
 # CrowdStrike Falcon and Microsoft Defender for Endpoint customers can also query
 # their tenant for the presence of indicators within their own environment.
 #
 # github.com/jasonsford
-# 30 August 2022
+# 7 September 2022
 
-import dns.resolver
-import json
-import re
-import requests
-import shodan
-import urllib.request
-import urllib.parse
+# Dependencies for file output
 from datetime import datetime
-from os.path import exists
+import json
+
+# Library to determine if user query is a valid domain, hash, or ip
 from validate import isValidDomain, isValidFileHash, isValidIpAddress
+
+# Free Resources 
+import circl        # Circl.lu
+import echotrail    # Echotrail.io
+import filescan     # Filescan.io
+import greynoise    # GreyNoise.io
+import hybrid       # Hybrid Analysis
+import netlas       # Netlas.io
+import onyphe       # Onyphe
+import shodanpy     # Shodan
+import stalkphish   # Stalkphish
+import strato       # Stratosphere IPS
+import triage       # Tria.ge
+import urlhaus      # URLhaus
+import urlscan      # URLscan.io
+import virustotal   # VirusTotal
+
+# Paid Resources
+import crwd         # CrowdStrike
+import etintel      # Emerging Threats Intelligence
+import msde         # Microsoft Defender for Endpoint
 
 class intel_collector:
     
-    def __init__(self):
-    
-        # Circl.lu
-        self.circl_base_url = 'https://hashlookup.circl.lu/lookup/'
-        
-        # CrowdStrike
-        self.crwd_base_url = 'https://api.crowdstrike.com'
-        self.crwd_client_id = 'your crowdstrike api client id'
-        self.crwd_client_secret = 'your crowdstrike api client secret'
-        
-        # Echotrail.io
-        self.echotrail_base_url = 'https://api.echotrail.io/v1/private/insights/'
-        self.echotrail_api_key = 'your echotrail api key'
-
-        # Emerging Threats Intelligence (Proofpoint)
-        self.etintel_base_url = 'https://api.emergingthreats.net/v1/'
-        self.etintel_api_key = 'your emerging threats intelligence api key'
-        
-        # Filescan.io
-        self.filescan_base_url = 'https://filescan.io/api/'
-        self.filescan_api_key = 'your filescan.io api key'
-        
-        # GreyNoise
-        self.greynoise_base_url = 'https://api.greynoise.io/v3/community/'
-        self.greynoise_api_key = 'your greynoise community api key'
-        
-        # Hybrid Analysis
-        self.hybrid_base_url = 'https://www.hybrid-analysis.com/api/v2/'
-        self.hybrid_api_key = 'your hybrid analysis api key'
-
-        # Microsoft
-        self.msft_base_url = 'https://login.windows.net/%s/oauth2/token'
-        self.msft_app_url = 'https://api.securitycenter.windows.com'
-        self.msft_tenant_id = 'your M365 tenant id'
-        self.msft_client_id = 'your M365 client id'
-        self.msft_client_secret = 'your M365 client secret'
-        
-        # Netlas
-        self.netlas_base_url = 'https://app.netlas.io'
-        self.netlas_api_key = 'your netlas api key'
-
-        # Onyphe
-        self.onyphe_summary_base_url = 'https://www.onyphe.io/api/v2/summary/'
-        self.onyphe_api_key = 'apikey <your onyphe api key>'
-        
-        # Shodan
-        self.shodan_api_key = 'your shodan api key'
-
-        # Stalkphish
-        self.stalkphish_base_url = 'https://www.stalkphish.io/api/v1/'
-        self.stalkphish_api_key = 'Token <your stalkphish api key>'
-        
-        # Tria.ge
-        self.triage_base_url = 'https://api.tria.ge/v0/'
-        self.triage_api_key = 'your tria.ge api key'
-
-        # Urlhaus
-        self.urlhaus_base_url = 'https://urlhaus-api.abuse.ch/v1'
-
-        # Urlscan.io
-        self.urlscan_base_url = 'https://urlscan.io/api/v1/'
-        self.urlscan_api_key = 'your urlscan.io api key'
-
-        # VirusTotal
-        self.virustotal_base_url = 'https://www.virustotal.com/api/v3/'
-        self.virustotal_api_key = 'your virustotal api key'
-
     def find_domain(self, domain: str):
 
         validDomain = False
+        # Check the input to determine if it is a valid TLD
         try:
             validDomain = isValidDomain(domain)
         except:
             pass
 
         if validDomain is True:
+            # Store the current date and time so it can be appended to the name of the output file
             now = datetime.now()
-            self.flat_output_file = domain + "_" + now.strftime("%Y%m%d_%H%M%S") + ".csv"
+            output_file = domain + "_" + now.strftime("%Y%m%d_%H%M%S") + ".csv"
+            # Empty dictionary to store results from API calls
+            results = {}
             
-            self.etintel_domain(domain)         # Emerging Threats
-            self.msft_domain(domain)            # Microsoft Defender for Endpoint
-            self.netlas_iocs(domain)            # Netlas.io
-            self.onyphe_domain(domain)          # Onyphe
-            self.shodan_domain(domain)          # Shodan
-            self.triage_iocs(domain,'domain')   # Tria.ge
-            self.urlhaus_iocs(domain,'host')    # Urlhaus
-            self.urlscan_domain(domain)         # Urlscan.io
-            self.virustotal_domain(domain)      # VirusTotal
+            results["Emerging Threats"] = etintel.domain(domain)        # Emerging Threats
+            results["Microsoft"] = msde.domain(domain)                  # Microsoft Defender for Endpoint
+            results["Netlas"] = netlas.iocs(domain)                     # Netlas.io
+            results["Onyphe"] = onyphe.domain(domain)                   # Onyphe
+            results["Shodan"] = shodanpy.domain(domain)                 # Shodan
+            results["Tria.ge"] = triage.iocs(domain,'domain')           # Tria.ge
+            results["URLhaus"] = urlhaus.iocs(domain,'host')            # Urlhaus
+            results["URLScan"] = urlscan.domain(domain)                 # Urlscan.io
+            results["VirusTotal"] = virustotal.domain(domain)           # VirusTotal
 
-            if(exists(self.flat_output_file) == True):
-                print('Results written to ' + self.flat_output_file)
-
+            # If the results dictionary is not empty, iterate through each key and write it to the output file
+            if results != {}:
+                with open(output_file, 'w') as output:
+                    for key in results.keys():
+                        output.write("%s, %s\n" % (key, json.dumps(results[key])))
+                # Uncomment this line to return responses as JSON. Useful if you're passing output to another script.
+                #return results
+            else:
+                print('No results for ' + domain)
         else:
-            print(domain + ' is not a valid domain name.')
+            print(domain + ' is not a valid top level domain name.')
 
     def find_hash(self, hash: str):
 
         validFileHash = False
+        # Check the input to determine if it is a valid file hash
         try:
             validFileHash = isValidFileHash(hash)
         except:
             pass
 
         if validFileHash is True:
+            # Store the current date and time so it can be appended to the name of the output file
             now = datetime.now()
-            self.flat_output_file = hash + "_" + now.strftime("%Y%m%d_%H%M%S") + ".csv"
-                    
-            if(len(hash) == 32):
-                self.circl_hash(hash,'md5')         # Circl.lu
-                self.crwd_iocs(hash,'md5')          # CrowdStrike Falcon
-                self.echotrail_hash(hash)           # Echotrail.io
-                self.etintel_hash(hash)             # Emerging Threats
-                self.filescan_hash(hash,'md5')      # Filescan.io
-                self.hybrid_hash(hash)              # Hybrid Analysis
-                self.triage_iocs(hash,'md5')        # Tria.ge
-                self.urlhaus_iocs(hash,'md5')       # Urlhaus
-                self.virustotal_hash(hash)          # VirusTotal
-            if(len(hash) == 40):
-                self.circl_hash(hash,'sha1')        # Circl.lu
-                self.filescan_hash(hash,'sha1')     # Filescan.io
-                self.hybrid_hash(hash)              # Hybrid Analysis
-                self.msft_hash(hash)                # Microsoft Defender for Endpoint            
-                self.triage_iocs(hash,'sha1')       # Tria.ge
-                self.virustotal_hash(hash)          # VirusTotal
-            if(len(hash) == 64):
-                self.circl_hash(hash,'sha256')      # Circl.lu
-                self.crwd_iocs(hash,'sha256')       # CrowdStrike Falcon
-                self.echotrail_hash(hash)           # Echotrail.io
-                self.filescan_hash(hash,'sha256')   # Filescan.io
-                self.hybrid_hash(hash)              # Hybrid Analysis
-                self.msft_hash(hash)                # Microsoft Defender for Endpoint
-                self.triage_iocs(hash,'sha256')     # Tria.ge
-                self.urlhaus_iocs(hash,'sha256')    # Urlhaus
-                self.urlscan_hash(hash)             # Urlscan.io
-                self.virustotal_hash(hash)          # VirusTotal
-            if(len(hash) == 128):
-                self.triage_iocs(hash,'sha512')     # Tria.ge
+            output_file = hash + "_" + now.strftime("%Y%m%d_%H%M%S") + ".csv"
+            # Empty dictionary to store results from API calls
+            results = {}
 
-            if(exists(self.flat_output_file) == True):
-                print('Results written to ' + self.flat_output_file)
+            # Query the appropriate API based on the number of characters in the hash
+            if(len(hash) == 32):
+                results["Circl.lu"] = circl.hash(hash,'md5')              # Circl.lu
+                results["CrowdStrike"] = crwd.iocs(hash,'md5')           # CrowdStrike Falcon
+                results["Echotrail"] = echotrail.hash(hash)              # Echotrail.io
+                results["Emerging Threats"] = etintel.hash(hash)         # Emerging Threats
+                results["FileScan.io"] = filescan.hash(hash,'md5')       # Filescan.io
+                results["Hybrid Analysis"] = hybrid.hash(hash)           # Hybrid Analysis
+                results["Tria.ge"] = triage.iocs(hash,'md5')             # Tria.ge
+                results["URLhaus"] = urlhaus.iocs(hash,'md5')            # Urlhaus
+                results["VirusTotal"] = virustotal.hash(hash)            # VirusTotal
+            if(len(hash) == 40):
+                results["Circl.lu"] = circl.hash(hash,'sha1')             # Circl.lu
+                results["FileScan.io"] = filescan.hash(hash,'sha1')      # Filescan.io
+                results["Hybrid Analysis"] = hybrid.hash(hash)           # Hybrid Analysis
+                results["Microsoft"] = msde.hash(hash)                   # Microsoft Defender for Endpoint            
+                results["Tria.ge"] = triage.iocs(hash,'sha1')            # Tria.ge
+                results["VirusTotal"] = virustotal.hash(hash)            # VirusTotal
+            if(len(hash) == 64):
+                results["Circl.lu"] = circl.hash(hash,'sha256')          # Circl.lu
+                results["CrowdStrike"] = crwd.iocs(hash,'sha256')        # CrowdStrike Falcon
+                results["Echotrail"] = echotrail.hash(hash)              # Echotrail.io
+                results["FileScan.io"] = filescan.hash(hash,'sha256')    # Filescan.io
+                results["Hybrid Analysis"] = hybrid.hash(hash)           # Hybrid Analysis
+                results["Microsoft"] = msde.hash(hash)                   # Microsoft Defender for Endpoint
+                results["Tria.ge"] = triage.iocs(hash,'sha256')          # Tria.ge
+                results["URLhaus"] = urlhaus.iocs(hash,'sha256')         # Urlhaus
+                results["URLScan"] = urlscan.hash(hash)                  # Urlscan.io
+                results["VirusTotal"] = virustotal.hash(hash)            # VirusTotal
+            if(len(hash) == 128):
+                results["Tria.ge"] = triage.iocs(hash,'sha512')          # Tria.ge
+
+            # If the results dictionary is not empty, iterate through each key and write it to the output file
+            if results != {}:
+                with open(output_file, 'w') as output:
+                    for key in results.keys():
+                        output.write("%s, %s\n" % (key, json.dumps(results[key])))
+                # Uncomment this line to return responses as JSON. Useful if you're passing output to another script.
+                #return results
+            else:
+                print('No results for ' + hash)
 
         else:
             print(hash + ' is not a valid file hash.')
@@ -170,1028 +142,42 @@ class intel_collector:
     def find_ip(self, ip: str):
     
         validIpAddress = False
+        # Check the input to determine if it is a valid IP address
         try:
             validIpAddress = isValidIpAddress(ip)
         except:
             pass
 
         if validIpAddress is True:
+            # Store the current date and time so it can be appended to the name of the output file
             now = datetime.now()
-            self.flat_output_file = ip + "_" + now.strftime("%Y%m%d_%H%M%S") + ".csv"
+            output_file = ip + "_" + now.strftime("%Y%m%d_%H%M%S") + ".csv"
+            # Empty dictionary to store results from API calls
+            results = {}
 
-            self.crwd_iocs(ip,'ipv4')       # CrowdStrike Falcon
-            self.etintel_ip(ip)             # Emerging Threats
-            self.greynoise(ip)              # GreyNoise
-            self.msft_ip(ip)                # Microsoft Defender for Endpoint
-            self.netlas_iocs(ip)            # Netlas.io
-            self.onyphe_ip(ip)              # Onyphe
-            self.shodan_ip(ip)              # Shodan
-            self.sorbs_ip(ip)               # Sorbs
-            self.spamhaus_ip(ip)            # Spamhaus Zen
-            self.stalkphish_ip(ip)          # Stalkphish
-            self.triage_iocs(ip,'ip')       # Tria.ge
-            self.urlhaus_iocs(ip,'host')    # Urlhaus
-            self.urlscan_ip(ip)             # Urlscan.io
-            self.virustotal_ip(ip)          # VirusTotal   
+            results["CrowdStrike"] = crwd.iocs(ip,'ipv4')        # CrowdStrike Falcon
+            results["Emerging Threats"] = etintel.ip(ip)         # Emerging Threats
+            results["GreyNoise"] = greynoise.ip(ip)              # GreyNoise
+            results["Microsoft"] = msde.ip(ip)                   # Microsoft Defender for Endpoint
+            results["Netlas"] = netlas.iocs(ip)                  # Netlas.io
+            results["Onyphe"] = onyphe.ip(ip)                    # Onyphe
+            results["Shodan"] = shodanpy.ip(ip)                  # Shodan
+            results["Stalkphish"] = stalkphish.ip(ip)            # Stalkphish
+            results["Stratosphere IPS"] = strato.ip(ip)          # Stratosphere IPS
+            results["Tria.ge"] = triage.iocs(ip,'ip')            # Tria.ge
+            results["URLhaus"] = urlhaus.iocs(ip,'host')         # Urlhaus
+            results["URLScan"] = urlscan.ip(ip)                  # Urlscan.io
+            results["VirusTotal"] = virustotal.ip(ip)            # VirusTotal   
 
-            if(exists(self.flat_output_file) == True):        
-                print('Results written to ' + self.flat_output_file)
+            # If the results dictionary is not empty, iterate through each key and write it to the output file
+            if results != {}:
+                with open(output_file, 'w') as output:
+                    for key in results.keys():
+                        output.write("%s, %s\n" % (key, json.dumps(results[key])))
+                # Uncomment this line to return responses as JSON. Useful if you're passing output to another script.
+                #return results
+            else:
+                print('No results for ' + ip)
 
         else:
             print(ip + ' is not a valid, publicly routable IPv4 address.')
-
-    def circl_hash(self, indicator: str, indicator_type: str):
-
-        circl_session = requests.session()
-        circl_session.verify = True
-        circl_session.headers = {'accept':'application/json'}
-
-        circl_api_response = circl_session.get(self.circl_base_url + indicator_type + '/' + indicator,headers=circl_session.headers)
-        
-        if(circl_api_response.status_code == 200):
-            event_array = json.loads(circl_api_response.text)
-            print(indicator + ' response from circl.lu')
-            d = json.dumps(event_array)
-            d = 'circl.lu,' + d
-            d = d.replace('"', '')
-            d = d.replace('{', '')
-            d = d.replace('}', '')
-            d = d.replace(':',',')
-            print(d, file=open(self.flat_output_file, "a"))
-
-    def crwd_iocs(self, indicator: str, indicator_type: str):
-
-        crwd_session = requests.session()
-        crwd_session.verify = True
-        
-        crwd_payload = {'client_id': self.crwd_client_id, 'client_secret': self.crwd_client_secret}
-
-        crwd_api_response = crwd_session.post(self.crwd_base_url + '/oauth2/token', data=crwd_payload)
-
-        if(crwd_api_response.status_code == 201):
-
-            headers =  {'Authorization': f'Bearer {crwd_api_response.json()["access_token"]}',
-                       'token_type': 'bearer',
-                       'Content-Type': 'application/json'}
-
-            crwd_session.headers = headers
-
-            crwd_params = {'type': indicator_type, 'value': indicator}
-
-            crwd_getdetailedinfo = crwd_session.get(self.crwd_base_url + '/indicators/entities/iocs/v1', params=crwd_params)
-
-            if(crwd_getdetailedinfo.status_code == 200):
-                event_array = json.loads(crwd_getdetailedinfo.text)['resources']
-                print(indicator + ' found in CrowdStrike - Custom IOCs')
-                for e in event_array:
-                    d = json.dumps(e)
-                    d = 'CrowdStrike,' + d
-                    print(d, file=open(self.flat_output_file, "a"))        
-
-        crwd_session.close()
-
-    def echotrail_hash(self, hash:str):
-
-        echotrail_session = requests.session()
-        echotrail_session.verify = True
-        echotrail_session.headers = {'X-Api-Key':self.echotrail_api_key,'Content-Type':'application/json'}
-        echotrail_api_response = echotrail_session.get(self.echotrail_base_url + hash,headers=echotrail_session.headers)
-
-        if(echotrail_api_response.status_code == 200):
-            event_array = json.loads(echotrail_api_response.text)
-            print(hash + ' response from echotrail.io')
-            d = json.dumps(event_array)
-            d = 'echotrail.io,' + d
-            d = d.replace('"', '')
-            d = d.replace('{', '')
-            d = d.replace('}', '')
-            d = d.replace(':',',')
-            d = d.replace('message, ','')
-            print(d, file=open(self.flat_output_file, "a"))  
-
-    def etintel_domain(self, domain: str):
-
-        etintel_session = requests.session()
-        etintel_session.verify = True
-        
-        etintel_ips_response = etintel_session.get((self.etintel_base_url + 'domains/' + domain + '/ips'), headers={'Authorization': self.etintel_api_key})
-        etintel_events_response = etintel_session.get((self.etintel_base_url + 'domains/' + domain + '/events'), headers={'Authorization': self.etintel_api_key})
-        etintel_geoloc_response = etintel_session.get((self.etintel_base_url + 'domains/' + domain + '/geoloc'), headers={'Authorization': self.etintel_api_key})
-        etintel_nameservers_response = etintel_session.get((self.etintel_base_url + 'domains/' + domain + '/nameservers'), headers={'Authorization': self.etintel_api_key})
-        etintel_reputation_response = etintel_session.get((self.etintel_base_url + 'domains/' + domain + '/reputation'), headers={'Authorization': self.etintel_api_key})
-        etintel_samples_response = etintel_session.get((self.etintel_base_url + 'domains/' + domain + '/samples'), headers={'Authorization': self.etintel_api_key})
-        etintel_urls_response = etintel_session.get((self.etintel_base_url + 'domains/' + domain + '/urls'), headers={'Authorization': self.etintel_api_key})
-        etintel_whois_response = etintel_session.get((self.etintel_base_url + 'domains/' + domain + '/whois'), headers={'Authorization': self.etintel_api_key})
-    
-        if "[]" not in etintel_ips_response.text:
-            event_array = json.loads(etintel_ips_response.text)['response']
-            print(domain + ' found in ET Intel - IPs')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'ET Intel,' + d
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))
-
-        if "[]" not in etintel_events_response.text:
-            event_array = json.loads(etintel_events_response.text)['response']
-            print(domain + ' found in ET Intel - Events')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'ET Intel,events,' + d
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))
-
-        if "[]" not in etintel_geoloc_response.text:
-            event_array = json.loads(etintel_geoloc_response.text)['response']
-            print(domain + ' found in ET Intel - Geolocation')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'ET Intel,geoloc,' + d
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))
-
-        if "[]" not in etintel_nameservers_response.text:
-            event_array = json.loads(etintel_nameservers_response.text)['response']
-            print(domain + ' found in ET Intel - Nameservers')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'ET Intel,nameservers,' + d
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))
-
-        if "[]" not in etintel_reputation_response.text:
-            event_array = json.loads(etintel_reputation_response.text)['response']
-            print(domain + ' found in ET Intel - Reputation')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'ET Intel,reputation,' + d
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))
-
-        if "[]" not in etintel_samples_response.text:
-            event_array = json.loads(etintel_samples_response.text)['response']
-            print(domain + ' found in ET Intel - Samples')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'ET Intel,samples,' + d
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))
-
-        if "[]" not in etintel_urls_response.text:
-            event_array = json.loads(etintel_urls_response.text)['response']
-            print(domain + ' found in ET Intel - URLs')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'ET Intel,urls,' + d
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))
-
-        if "[]" not in etintel_whois_response.text:
-            event_array = json.loads(etintel_whois_response.text)['response']
-            print(domain + ' found in ET Intel - Whois')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'ET Intel,urls,' + d
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))
-
-    def etintel_ip(self, ip: str):
-        
-        etintel_session = requests.session()
-        etintel_session.verify = True
-        
-        etintel_domains_response = etintel_session.get((self.etintel_base_url + 'ips/' + ip + '/domains'), headers={'Authorization': self.etintel_api_key})
-        etintel_events_response = etintel_session.get((self.etintel_base_url + 'ips/' + ip + '/events'), headers={'Authorization': self.etintel_api_key})
-        etintel_geoloc_response = etintel_session.get((self.etintel_base_url + 'ips/' + ip + '/geoloc'), headers={'Authorization': self.etintel_api_key})
-        etintel_reputation_response = etintel_session.get((self.etintel_base_url + 'ips/' + ip + '/reputation'), headers={'Authorization': self.etintel_api_key})
-        etintel_samples_response = etintel_session.get((self.etintel_base_url + 'ips/' + ip + '/samples'), headers={'Authorization': self.etintel_api_key})
-        etintel_urls_response = etintel_session.get((self.etintel_base_url + 'ips/' + ip + '/urls'), headers={'Authorization': self.etintel_api_key})
-
-        if "[]" not in etintel_domains_response.text:
-            event_array = json.loads(etintel_domains_response.text)['response']
-            print(ip + ' found in ET Intel - Domains')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'ET Intel,' + d
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))
-
-        if "[]" not in etintel_events_response.text:
-            event_array = json.loads(etintel_events_response.text)['response']
-            print(ip + ' found in ET Intel - Events')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'ET Intel,events,' + d
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))
-
-        if "[]" not in etintel_geoloc_response.text:
-            event_array = json.loads(etintel_geoloc_response.text)['response']
-            print(ip + ' found in ET Intel - Geolocation')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'ET Intel,geoloc,' + d
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))
-
-        if "[]" not in etintel_reputation_response.text:
-            event_array = json.loads(etintel_reputation_response.text)['response']
-            print(ip + ' found in ET Intel - Reputation')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'ET Intel,reputation,' + d
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))
-
-        if "[]" not in etintel_samples_response.text:
-            event_array = json.loads(etintel_samples_response.text)['response']
-            print(ip + ' found in ET Intel - Samples')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'ET Intel,samples,' + d
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))
-
-        if "[]" not in etintel_urls_response.text:
-            event_array = json.loads(etintel_urls_response.text)['response']
-            print(ip + ' found in ET Intel - URLs')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'ET Intel,urls,' + d
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))
-    
-    def etintel_hash(self, hash: str):
-        
-        etintel_session = requests.session()
-        etintel_session.verify = True
-        
-        etintel_samples_response = etintel_session.get((self.etintel_base_url + 'samples/' + hash), headers={'Authorization': self.etintel_api_key})
-        etintel_connections_response = etintel_session.get((self.etintel_base_url + 'samples/' + hash + '/connections'), headers={'Authorization': self.etintel_api_key})
-        etintel_dnslookups_response = etintel_session.get((self.etintel_base_url + 'samples/' + hash + '/dns'), headers={'Authorization': self.etintel_api_key})
-        etintel_httpreqs_response = etintel_session.get((self.etintel_base_url + 'samples/' + hash + '/http'), headers={'Authorization': self.etintel_api_key})
-        etintel_events_response = etintel_session.get((self.etintel_base_url + 'samples/' + hash + '/events'), headers={'Authorization': self.etintel_api_key})
-
-        if "[]" not in etintel_samples_response.text:
-            event_array = json.loads(etintel_samples_response.text)['response']
-            print(hash + ' found in ET Intel - Samples')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'ET Intel,' + d
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))
-
-        if "[]" not in etintel_connections_response.text:
-            event_array = json.loads(etintel_connections_response.text)['response']
-            print(hash + ' found in ET Intel - Sample Connections')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'ET Intel,' + d
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))
-
-        if "[]" not in etintel_dnslookups_response.text:
-            event_array = json.loads(etintel_dnslookups_response.text)['response']
-            print(hash + ' found in ET Intel - Sample DNS Lookups')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'ET Intel,' + d
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))
-
-        if "[]" not in etintel_httpreqs_response.text:
-            event_array = json.loads(etintel_httpreqs_response.text)['response']
-            print(hash + ' found in ET Intel - Sample HTTP Requests')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'ET Intel,' + d
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))
-
-        if "[]" not in etintel_events_response.text:
-            event_array = json.loads(etintel_events_response.text)['response']
-            print(hash + ' found in ET Intel - Sample IDS Events')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'ET Intel,' + d
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))
-
-    def filescan_hash(self, hash: str, indicator_type: str):
-
-        filescan_session = requests.session()
-        filescan_session.verify = True
-        filescan_session.headers = {'X-Api-Key':self.filescan_api_key,'Content-Type':'application/json'}
-        
-        filescan_api_response = filescan_session.get(self.filescan_base_url + 'reports/search?' + indicator_type + '=' + hash,headers=filescan_session.headers)
-
-        if(filescan_api_response.status_code == 200):
-            event_array = json.loads(filescan_api_response.text)
-            print(hash + ' response from filescan.io')
-            d = json.dumps(event_array)
-            d = 'filescan.io,' + d
-            d = d.replace('"', '')
-            d = d.replace('{', '')
-            d = d.replace('[', '')
-            d = d.replace('}', '')
-            d = d.replace(']', '')
-            d = d.replace(' ', '')
-            d = d.replace(':',',')
-            print(d, file=open(self.flat_output_file, "a"))
-
-    def greynoise(self, ip: str):
-
-        greynoise_session = requests.session()
-        greynoise_session.verify = True
-
-        greynoise_response = greynoise_session.get((self.greynoise_base_url + ip), headers={'key': self.greynoise_api_key})
-
-        grey_array = json.loads(greynoise_response.text)
-        print(ip + ' response from GreyNoise')
-        d = json.dumps(grey_array)
-        d = 'GreyNoise,' + d
-        d = d.replace('\'', '')
-        d = d.replace('"', '')
-        d = d.replace('{', '')
-        d = d.replace('}', '')
-        d = d.replace('ip:', 'ip,')
-        d = d.replace('noise:', 'noise,')
-        d = d.replace('riot:', 'riot,')
-        d = d.replace('classification:', 'classification,')
-        d = d.replace('name:', 'name,')
-        d = d.replace('link:', 'link,')
-        d = d.replace('last_seen:', 'last_seen,')
-        d = d.replace('message:', 'message,')
-        print(d, file=open(self.flat_output_file, "a"))
-    
-    def hybrid_hash(self, hash: str):
-
-        hybrid_session = requests.session()
-        hybrid_session.verify = True
-        hybrid_session.headers = {'api-key':self.hybrid_api_key,'user-agent':'Falcon Sandbox','accept':'application/json','Content-Type':'application/x-www-form-urlencoded'}
-
-        hybrid_api_response = hybrid_session.post(self.hybrid_base_url + 'search/hash','hash=' + hash)
-
-        if(hybrid_api_response.status_code == 200):
-            event_array = json.loads(hybrid_api_response.text)
-            print(hash + ' response from Hybrid Analysis')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'Hybrid Analysis,' + d
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))
-
-    def msft_domain(self, domain: str):
-
-        msft_session = requests.session()
-        
-        msft_payload = {'resource': self.msft_app_url,
-                   'client_id': self.msft_client_id,
-                   'client_secret': self.msft_client_secret,
-                   'grant_type': 'client_credentials'}
-
-        msft_data = urllib.parse.urlencode(msft_payload).encode("utf-8")
-
-        msft_url = self.msft_base_url % self.msft_tenant_id
-
-        msft_request = urllib.request.Request(msft_url, msft_data)
-        msft_response = urllib.request.urlopen(msft_request)
-
-        msft_auth_json = json.loads(msft_response.read())
-
-        if('access_token' in msft_auth_json):
-
-            msft_session_headers = {'Authorization': f'Bearer {msft_auth_json["access_token"]}',
-                        'token_type': 'bearer',
-                        'Content-Type': 'application/json'}
-
-            msft_session.headers = msft_session_headers
-
-            msft_domain_stats = msft_session.get(self.msft_app_url + '/api/domains/' + domain + '/stats')
-
-            if(msft_domain_stats.status_code == 200):
-                event_array = json.loads(msft_domain_stats.text)
-                print(domain + ' response from Microsoft Defender - Domain Stats')
-                d = json.dumps(event_array)
-                d = 'Microsoft' + d
-                d = d.replace('"@odata.context": "https://api.securitycenter.windows.com/api/$metadata#microsoft.windowsDefenderATP.api.InOrgDomainStats"', '')
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))  
-
-            msft_session.close()
-
-    def msft_hash(self, hash: str):
-
-        msft_session = requests.session()
-        
-        msft_payload = {'resource': self.msft_app_url,
-                   'client_id': self.msft_client_id,
-                   'client_secret': self.msft_client_secret,
-                   'grant_type': 'client_credentials'}
-
-        msft_data = urllib.parse.urlencode(msft_payload).encode("utf-8")
-
-        msft_url = self.msft_base_url % self.msft_tenant_id
-
-        msft_request = urllib.request.Request(msft_url, msft_data)
-        msft_response = urllib.request.urlopen(msft_request)
-
-        msft_auth_json = json.loads(msft_response.read())
-
-        if('access_token' in msft_auth_json):
-
-            msft_session_headers = {'Authorization': f'Bearer {msft_auth_json["access_token"]}',
-                        'token_type': 'bearer',
-                        'Content-Type': 'application/json'}
-
-            msft_session.headers = msft_session_headers
-
-            msft_globalfile_stats = msft_session.get(self.msft_app_url + '/api/files/' + hash)
-            msft_orgfile_stats = msft_session.get(self.msft_app_url + '/api/files/' + hash + '/stats')
-
-            if(msft_globalfile_stats.status_code == 200):
-                event_array = json.loads(msft_globalfile_stats.text)
-                print(hash + ' response from Microsoft Defender - Global File Info')
-                d = json.dumps(event_array)
-                d = 'Microsoft' + d
-                d = d.replace('"@odata.context": "https://api.securitycenter.windows.com/api/$metadata#Files/$entity"', '')
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))  
-
-            if(msft_orgfile_stats.status_code == 200):
-                event_array = json.loads(msft_orgfile_stats.text)
-                print(hash + ' response from Microsoft Defender - Organization File Info')
-                d = json.dumps(event_array)
-                d = 'Microsoft' + d
-                d = d.replace('"@odata.context": "https://api.securitycenter.windows.com/api/$metadata#Files/$entity"', '')
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))  
-
-            msft_session.close()
-
-    def msft_ip(self, ip: str):
-
-        msft_session = requests.session()
-        
-        msft_payload = {'resource': self.msft_app_url,
-                   'client_id': self.msft_client_id,
-                   'client_secret': self.msft_client_secret,
-                   'grant_type': 'client_credentials'}
-
-        msft_data = urllib.parse.urlencode(msft_payload).encode("utf-8")
-
-        msft_url = self.msft_base_url % self.msft_tenant_id
-
-        msft_request = urllib.request.Request(msft_url, msft_data)
-        msft_response = urllib.request.urlopen(msft_request)
-
-        msft_auth_json = json.loads(msft_response.read())
-
-        if('access_token' in msft_auth_json):
-
-            msft_session_headers = {'Authorization': f'Bearer {msft_auth_json["access_token"]}',
-                        'token_type': 'bearer',
-                        'Content-Type': 'application/json'}
-
-            msft_session.headers = msft_session_headers
-
-            msft_ip_stats = msft_session.get(self.msft_app_url + '/api/ips/' + ip + '/stats')
-
-            if(msft_ip_stats.status_code == 200):
-                event_array = json.loads(msft_ip_stats.text)
-                print(ip + ' response from Microsoft Defender - IP Stats')
-                d = json.dumps(event_array)
-                d = 'Microsoft' + d
-                d = d.replace('"@odata.context": "https://api.securitycenter.windows.com/api/$metadata#microsoft.windowsDefenderATP.api.InOrgIPStats"', '')
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))  
-
-            msft_session.close()
-    
-    def netlas_iocs(self, indicator: str):
-
-        netlas_request = self.netlas_base_url + '/api/responses/?q=host%3A' + indicator
-        netlas_response = requests.get(netlas_request, headers={'X-API-Key':self.netlas_api_key})
-        
-        if "[]" not in netlas_response.text:     
-            event_array = json.loads(netlas_response.text)['items']
-            print(indicator + ' response from Netlas.io')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'Netlas,' + d
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace('[', '')
-                d = d.replace(']', '')
-                d = d.replace('"', '')
-                d = d.replace('http:', 'http|')
-                d = d.replace('https:', 'https|')
-                d = d.replace(':', ',')
-                d = d.replace('http|', 'http:')
-                d = d.replace('https|', 'https:')               
-                print(d, file=open(self.flat_output_file, "a"))
-
-    def onyphe_domain(self, domain: str):
-
-        onyphe_session = requests.session()
-        onyphe_session.verify = True
-
-        onyphe_summary_response = onyphe_session.get((self.onyphe_summary_base_url + 'domain/' + domain), headers={'Authorization': self.onyphe_api_key})
-
-        if "[]" not in onyphe_summary_response.text:
-            event_array = json.loads(onyphe_summary_response.text)['results']
-            print(domain + ' response from Onyphe - Summary')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'Onyphe,summary,' + d
-                d = d.replace('"', '')
-                d = d.replace('@', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace('[', '')
-                d = d.replace(']', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))
-
-    def onyphe_ip(self, ip: str):
-
-        onyphe_session = requests.session()
-        onyphe_session.verify = True
-
-        onyphe_summary_response = onyphe_session.get((self.onyphe_summary_base_url + 'ip/' + ip), headers={'Authorization': self.onyphe_api_key})
-
-        if "[]" not in onyphe_summary_response.text:
-            event_array = json.loads(onyphe_summary_response.text)['results']
-            print(ip + ' response from Onyphe - Summary')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'Onyphe,summary,' + d
-                d = d.replace('"', '')
-                d = d.replace('@', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace('[', '')
-                d = d.replace(']', '')
-                d = d.replace(' ', '')
-                d = d.replace(':', ',')
-                print(d, file=open(self.flat_output_file, "a"))
-
-    def shodan_domain(self, domain: str):
-
-        shodan_api = shodan.Shodan(self.shodan_api_key)       
-
-        try:
-            shodan_result = shodan_api.dns.domain_info(domain)
-            print(domain + ' found in Shodan')
-            d = json.dumps(shodan_result)
-            d = 'Shodan,' + d
-            d = d.replace('"', '')
-            d = d.replace('\'', '')
-            d = d.replace('{', '')
-            d = d.replace('}', '')
-            d = d.replace('[', '')
-            d = d.replace(']', '')
-            d = d.replace(' ', '')
-            d = d.replace(':', ',')
-            print(d, file=open(self.flat_output_file, "a"))
-
-        except shodan.APIError as error:
-            print(domain + ' not found in Shodan')
-
-    def shodan_ip(self, ip: str):
-
-        shodan_api = shodan.Shodan(self.shodan_api_key)       
-
-        try:
-            shodan_result = shodan_api.host(ip)
-            print(ip + ' found in Shodan')
-            d = json.dumps(shodan_result)
-            d = 'Shodan,' + d
-            d = d.replace('"', '')
-            d = d.replace('\'', '')
-            d = d.replace('{', '')
-            d = d.replace('}', '')
-            d = d.replace('[', '')
-            d = d.replace(']', '')
-            d = d.replace(' ', '')
-            d = d.replace(':', ',')
-            print(d, file=open(self.flat_output_file, "a"))
-
-        except shodan.APIError as error:
-            print(ip + ' not found in Shodan')
-
-    def sorbs_ip(self, ip:str):
-
-        sorbs_ip_codes = {'127.0.0.2': 'http.dnsbl.sorbs.net',
-                          '127.0.0.3': 'socks.dnsbl.sorbs.net',
-                          '127.0.0.4': 'misc.dnsbl.sorbs.net',
-                          '127.0.0.5': 'smtp.dnsbl.sorbs.net',
-                          '127.0.0.6': 'spam.dnsbl.sorbs.net',
-                          '127.0.0.7': 'web.dnsbl.sorbs.net',
-                          '127.0.0.8': 'block.dnsbl.sorbs.net',
-                          '127.0.0.9': 'zombie.dnsbl.sorbs.net',
-                          '127.0.0.10':'dul.dnsbl.sorbs.net',
-                          '127.0.0.11':'badconf.rhsbl.sorbs.net',
-                          '127.0.0.12':'nomail.rhsbl.sorbs.net',
-                          '127.0.0.14':'noserver.rhsbl.sorbs.net',
-                                     0:'Not Found in Sorbs IP Data'}
-        
-        hostname = ".".join(ip.split(".")[::-1]) + ".dnsbl.sorbs.net"
-
-        try:
-            sorbs_result = dns.resolver.resolve(hostname, 'A')
-        except:
-            sorbs_result = 0
-
-        if(sorbs_result != 0):
-            for data in sorbs_result:
-                print(ip + ' response from Sorbs')
-                d = 'Sorbs,ip,' + ip + ',return code,' + data.to_text() + ',response,' + sorbs_ip_codes.get(data.to_text())
-                print(d, file=open(self.flat_output_file, "a"))
-
-    def spamhaus_ip(self, ip:str):
-
-        spamhaus_ip_codes = {'127.0.0.2' :'SBL Data',
-                             '127.0.0.3' :'SBL CSS Data',
-                             '127.0.0.4' :'XBL CBL Data',
-                             '127.0.0.9' :'SBL DROP/EDROP Data',
-                             '127.0.0.10':'PBL ISP Maintained',
-                             '127.0.0.11':'PBL Spamhaus Maintained',
-                                        0:'Not Found in Spamhaus IP Data'}
-
-        spamhaus_dns_hostname = ".".join(ip.split(".")[::-1]) + ".zen.spamhaus.org"
-
-        try:
-            spamhaus_result = dns.resolver.resolve(spamhaus_dns_hostname, 'A')
-        except:
-            spamhaus_result = 0
-        
-        if(spamhaus_result != 0):
-            for data in spamhaus_result:
-                print(ip + ' response from Spamhaus Zen')
-                d = 'Spamhaus,ip,' + ip + ',return code,' + data.to_text() + ',response,' + spamhaus_ip_codes.get(data.to_text())
-                print(d, file=open(self.flat_output_file, "a"))
-
-    def stalkphish_ip(self, ip:str):
-
-        stalkphish_session = requests.session()
-        stalkphish_session.verify = True
-        stalkphish_session.headers = {'Authorization':self.stalkphish_api_key}
-
-        stalkphish_api_response = stalkphish_session.get(self.stalkphish_base_url + 'search/ipv4/' + ip)
-
-        if(stalkphish_api_response.status_code == 200):
-            event_array = json.loads(stalkphish_api_response.text)
-            print(ip + ' response from Stalkphish')
-            for e in event_array:
-                d = json.dumps(e)
-                d = 'Stalkphish,' + d
-                d = d.replace('"', '')
-                d = d.replace('{', '')
-                d = d.replace('}', '')
-                d = d.replace(' ', '')
-                d = d.replace('siteurl:', 'siteurl,')
-                d = d.replace('sitedomain:', 'sitedomain,')
-                d = d.replace('pagetitle:', 'pagetitle,')
-                d = d.replace('firstseencode:', 'firstseencode,')
-                d = d.replace('firstseentime:', 'firstseentime,')
-                d = d.replace('ipaddress:', 'ipaddress,')
-                d = d.replace('asn:', 'asn,')
-                d = d.replace('asndesc:', 'asndesc,')
-                d = d.replace('asnreg:', 'asnreg,')
-                d = d.replace('extracted_emails:', 'extracted_emails,')
-                print(d, file=open(self.flat_output_file, "a"))
-
-    def triage_iocs(self, indicator: str, indicator_type: str):
-
-        triage_session = requests.session()
-        triage_session.verify = True
-        triage_session.headers = {'Authorization':'Bearer ' + self.triage_api_key,'Content-Type':'application/json'}
-        triage_api_response = triage_session.get(self.triage_base_url + 'search?query=' + indicator_type + ':' + indicator,headers=triage_session.headers)
-
-        if((triage_api_response.status_code == 200) and ("null" not in triage_api_response.text)):
-            event_array = json.loads(triage_api_response.text)
-            print(indicator + ' response from tria.ge')
-            d = json.dumps(event_array)
-            d = 'tria.ge,' + d
-            d = d.replace('"', '')
-            d = d.replace('{', '')
-            d = d.replace('[', '')
-            d = d.replace('}', '')
-            d = d.replace(']', '')
-            d = d.replace(' ', '')
-            d = d.replace(':',',')
-            print(d, file=open(self.flat_output_file, "a"))
-
-    def urlhaus_iocs(self, indicator: str, indicator_type: str):
-
-        urlhaus_session = requests.session()
-        urlhaus_session.verify = True
-
-        urlhaus_data = {indicator_type:indicator}
-        
-        if(indicator_type == 'host'):
-            urlhaus_api_response = urlhaus_session.post(self.urlhaus_base_url + 'host/', urlhaus_data, headers=urlhaus_session.headers)
-        else:
-            urlhaus_api_response = urlhaus_session.post(self.urlhaus_base_url + 'payload/', urlhaus_data, headers=urlhaus_session.headers)
-
-        if((urlhaus_api_response.status_code == 200) and ("no_results" not in urlhaus_api_response.text)):
-            event_array = json.loads(urlhaus_api_response.text)
-            print(indicator + ' response from urlhaus')
-            d = json.dumps(event_array)
-            d = 'urlhaus,' + d
-            d = d.replace('"', '')
-            d = d.replace('{', '')
-            d = d.replace('}', '')
-            d = d.replace(' ', '')
-            d = d.replace(':',',')
-            print(d, file=open(self.flat_output_file, "a"))
-    
-    def urlscan_domain(self, domain: str):
-
-        urlscan_session = requests.session()
-        urlscan_session.verify = True
-        urlscan_session.headers = {'API-Key':self.urlscan_api_key,'Content-Type':'application/json'}
-        urlscan_api_response = urlscan_session.get(self.urlscan_base_url + 'search/?q=domain:' + domain,headers=urlscan_session.headers)
-
-        if(urlscan_api_response.status_code == 200):
-            event_array = json.loads(urlscan_api_response.text)
-            print(domain + ' response from urlscan.io')
-            d = json.dumps(event_array)
-            d = 'urlscan.io,' + d
-            d = d.replace('"', '')
-            d = d.replace('{', '')
-            d = d.replace('[', '')
-            d = d.replace('}', '')
-            d = d.replace(']', '')
-            d = d.replace(' ', '')
-            d = d.replace(':',',')
-            d = d.replace('https,','https:')
-            d = re.sub('http,','http:',d)
-            print(d, file=open(self.flat_output_file, "a"))
-
-    def urlscan_hash(self, hash: str):
-
-        urlscan_session = requests.session()
-        urlscan_session.verify = True
-        urlscan_session.headers = {'API-Key':self.urlscan_api_key,'Content-Type':'application/json'}
-
-        urlscan_api_response = urlscan_session.get(self.urlscan_base_url + 'search/?q=hash:' + hash,headers=urlscan_session.headers)
-
-        if((urlscan_api_response.status_code == 200) and ("0" not in urlscan_api_response.text)):
-            event_array = json.loads(urlscan_api_response.text)
-            print(hash + ' response from urlscan.io')
-            d = json.dumps(event_array)
-            d = 'urlscan.io,' + d
-            d = d.replace('"', '')
-            d = d.replace('{', '')
-            d = d.replace('[', '')
-            d = d.replace('}', '')
-            d = d.replace(']', '')
-            d = d.replace(' ', '')
-            d = d.replace(':',',')
-            print(d, file=open(self.flat_output_file, "a"))
-
-    def urlscan_ip(self, ip: str):
-
-        urlscan_session = requests.session()
-        urlscan_session.verify = True
-        urlscan_session.headers = {'API-Key':self.urlscan_api_key,'Content-Type':'application/json'}
-
-        urlscan_api_response = urlscan_session.get(self.urlscan_base_url + 'search/?q=ip:' + ip,headers=urlscan_session.headers)
-
-        if(urlscan_api_response.status_code == 200):
-            event_array = json.loads(urlscan_api_response.text)
-            print(ip + ' response from urlscan.io')
-            d = json.dumps(event_array)
-            d = 'urlscan.io,' + d
-            d = d.replace('"', '')
-            d = d.replace('{', '')
-            d = d.replace('[', '')
-            d = d.replace('}', '')
-            d = d.replace(']', '')
-            d = d.replace(' ', '')
-            d = d.replace(':',',')
-            d = d.replace('https,','https:')
-            d = re.sub('http,','http:',d)
-            print(d, file=open(self.flat_output_file, "a"))
-
-    def virustotal_domain(self, domain: str):
-
-        virustotal_session = requests.session()
-        virustotal_session.verify = True
-        
-        virustotal_commfiles_response = virustotal_session.get((self.virustotal_base_url + 'domains/' + domain + '/communicating_files'), headers={'x-apikey': self.virustotal_api_key})
-        virustotal_resolutions_response = virustotal_session.get((self.virustotal_base_url + 'domains/' + domain + '/resolutions'), headers={'x-apikey': self.virustotal_api_key})
-        virustotal_whois_response = virustotal_session.get((self.virustotal_base_url + 'domains/' + domain + '/historical_whois'), headers={'x-apikey': self.virustotal_api_key})
-
-        if "[]" not in virustotal_commfiles_response.text:    
-            event_array = json.loads(virustotal_commfiles_response.text)
-            print(domain + ' response from VirusTotal - Communicating Files')
-            d = json.dumps(event_array)
-            d = 'VirusTotal,' + d
-            d = d.replace('"', '')
-            d = d.replace('{', '')
-            d = d.replace('}', '')
-            d = d.replace('[', '')
-            d = d.replace(']', '')
-            d = d.replace(' ', '')
-            d = d.replace(':', ',')
-            print(d, file=open(self.flat_output_file, "a"))
-
-        if "[]" not in virustotal_resolutions_response.text:    
-            event_array = json.loads(virustotal_resolutions_response.text)
-            print(domain + ' response from VirusTotal - Resolutions')
-            d = json.dumps(event_array)
-            d = 'VirusTotal,' + d
-            d = d.replace('"', '')
-            d = d.replace('{', '')
-            d = d.replace('}', '')
-            d = d.replace('[', '')
-            d = d.replace(']', '')
-            d = d.replace(' ', '')
-            d = d.replace(':', ',')
-            print(d, file=open(self.flat_output_file, "a"))
-
-        if "[]" not in virustotal_whois_response.text: 
-            event_array = json.loads(virustotal_whois_response.text)
-            print(domain + ' found in VirusTotal - Historical Whois')
-            d = json.dumps(event_array)
-            d = 'VirusTotal,' + d
-            d = d.replace('"', '')
-            d = d.replace('{', '')
-            d = d.replace('}', '')
-            d = d.replace('[', '')
-            d = d.replace(']', '')
-            d = d.replace(' ', '')
-            d = d.replace(':', ',')
-            print(d, file=open(self.flat_output_file, "a"))
-
-    def virustotal_ip(self, ip: str):
-
-        virustotal_session = requests.session()
-        virustotal_session.verify = True
-        
-        virustotal_whois_response = virustotal_session.get((self.virustotal_base_url + 'ip_addresses/' + ip + '/historical_whois'), headers={'x-apikey': self.virustotal_api_key})
-        virustotal_commfiles_response = virustotal_session.get((self.virustotal_base_url + 'ip_addresses/' + ip + '/communicating_files'), headers={'x-apikey': self.virustotal_api_key})
-
-        if "[]" not in virustotal_commfiles_response.text:    
-            event_array = json.loads(virustotal_commfiles_response.text)
-            print(ip + ' response from VirusTotal - Communicating Files')
-            d = json.dumps(event_array)
-            d = 'VirusTotal,' + d
-            d = d.replace('"', '')
-            d = d.replace('{', '')
-            d = d.replace('}', '')
-            d = d.replace('[', '')
-            d = d.replace(']', '')
-            d = d.replace(' ', '')
-            d = d.replace(':', ',')
-            print(d, file=open(self.flat_output_file, "a"))
-
-        if "[]" not in virustotal_whois_response.text: 
-            event_array = json.loads(virustotal_whois_response.text)
-            print(ip + ' response from VirusTotal - Historical Whois')
-            d = json.dumps(event_array)
-            d = 'VirusTotal,' + d
-            d = d.replace('"', '')
-            d = d.replace('{', '')
-            d = d.replace('}', '')
-            d = d.replace('[', '')
-            d = d.replace(']', '')
-            d = d.replace(' ', '')
-            d = d.replace(':', ',')
-            print(d, file=open(self.flat_output_file, "a"))
-
-    def virustotal_hash(self, hash: str):
-
-        virustotal_session = requests.session()
-        virustotal_session.verify = True
-
-        virustotal_behavior_response = virustotal_session.get((self.virustotal_base_url + 'files/' + hash + '/behaviour_summary'), headers={'x-apikey': self.virustotal_api_key})
-        virustotal_file_response = virustotal_session.get((self.virustotal_base_url + 'files/' + hash), headers={'x-apikey': self.virustotal_api_key})
-
-        if "[]" not in virustotal_file_response.text:    
-            event_array = json.loads(virustotal_file_response.text)
-            print(hash + ' response from VirusTotal - File Report')
-            d = json.dumps(event_array)
-            d = 'VirusTotal,' + d
-            d = d.replace('"', '')
-            d = d.replace('{', '')
-            d = d.replace('}', '')
-            d = d.replace('[', '')
-            d = d.replace(']', '')
-            d = d.replace(' ', '')
-            d = d.replace(':', ',')
-            print(d, file=open(self.flat_output_file, "a"))
-        
-        if "[]" not in virustotal_behavior_response.text:    
-            event_array = json.loads(virustotal_behavior_response.text)
-            print(hash + ' response from VirusTotal - File Behavior Reports')
-            d = json.dumps(event_array)
-            d = 'VirusTotal,' + d
-            d = d.replace('"', '')
-            d = d.replace('{', '')
-            d = d.replace('}', '')
-            d = d.replace('[', '')
-            d = d.replace(']', '')
-            d = d.replace(' ', '')
-            d = d.replace(':', ',')
-            print(d, file=open(self.flat_output_file, "a"))
