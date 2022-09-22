@@ -9,12 +9,16 @@ their tenant for the presence of indicators within their own environment.
 
 ## Supported APIs
 ### Free Resources
-Circl.lu (hashlookup.circl.lu)
+BinaryEdge (binaryedge.io)
+<br>Circl.lu (hashlookup.circl.lu)
+<br>Echotrail (echotrail.io)
 <br>Filescan.io (filescan.io)
 <br>GreyNoise Community API (api.greynoise.io)
 <br>Hybrid Analysis (hybrid-analysis.com)
+<br>LeakIX (leakix.net)
 <br>Netlas (app.netlas.io)
 <br>Onyphe Free Tier (onyphe.io)
+<br>PulseDive (pulsedive.com)
 <br>Shodan (shodan.io)
 <br>Stalkphish (stalkphish.io)
 <br>Stratosphere IPS (stratosphereips.org)
@@ -33,6 +37,9 @@ CrowdStrike Falcon Intel (api.crowdstrike.com)
 API keys are set from within the library for each intel source.
 
 ```python
+# binaryedge.py (BinaryEdge)
+binaryedge_api_key = 'your binary edge api key'
+
 # crwd.py (CrowdStrike)
 crwd_client_id = 'your crowdstrike api client id'
 crwd_client_secret = 'your crowdstrike api client secret'
@@ -52,6 +59,9 @@ greynoise_api_key = 'your greynoise community api key'
 # hybrid.py (Hybrid Analysis)
 hybrid_api_key = 'your hybrid analysis api key'
 
+# leakix.py (LeakIX)
+leakix_api_key = 'your leakix api key'
+
 # msde.py (Microsoft Defender for Endpoint)
 msft_tenant_id = 'your M365 tenant id'
 msft_client_id = 'your M365 client id'
@@ -63,11 +73,14 @@ netlas_api_key 'your netlas api key'
 # onyphe.py (Onyphe)
 onyphe_api_key = 'your onyphe api key'
 
+# pulsedive.py (Pulsedive)
+pulsedive_api_key = 'your pulsedive api key'
+
 # shodanpy.py (Shodan)
 shodan_api_key = 'your shodan api key'
 
 # stalkphish.py (Stalkphish)
-stalkphish_api_key = 'your stalkphish api key'
+stalkphish_api_key = 'Token your stalkphish api key'
 
 # triage.py (Tria.ge)
 triage_api_key = 'your tria.ge api key'
@@ -86,13 +99,16 @@ All modules are enabled by default. Modules within each function can be disabled
 ```python
 
 # Free Resources 
+import binaryedge
 import circl
 import echotrail
 import filescan
 import greynoise
 import hybrid
+import leakix
 import netlas
 import onyphe
+import pulsedive
 import shodanpy
 import stalkphish
 import strato
@@ -112,6 +128,7 @@ find_domain
     results["Microsoft"] = msde.domain(domain)                  # Microsoft Defender for Endpoint
     results["Netlas"] = netlas.iocs(domain)                     # Netlas.io
     results["Onyphe"] = onyphe.domain(domain)                   # Onyphe
+    results["Pulsedive"] = pulsedive.iocs(domain)               # Pulsedive
     results["Shodan"] = shodanpy.domain(domain)                 # Shodan
     results["Tria.ge"] = triage.iocs(domain,'domain')           # Tria.ge
     results["URLhaus"] = urlhaus.iocs(domain,'host')            # Urlhaus
@@ -134,12 +151,15 @@ find_hash
 
 find_ip
 
+    results["BinaryEdge"] = binaryedge.ip(ip)            # BinaryEdge.io
     results["CrowdStrike"] = crwd.iocs(ip,'ipv4')        # CrowdStrike Falcon
     results["Emerging Threats"] = etintel.ip(ip)         # Emerging Threats
     results["GreyNoise"] = greynoise.ip(ip)              # GreyNoise
+    results["LeakIX"] = leakix.ip(ip)                    # LeakIX
     results["Microsoft"] = msde.ip(ip)                   # Microsoft Defender for Endpoint
     results["Netlas"] = netlas.iocs(ip)                  # Netlas.io
     results["Onyphe"] = onyphe.ip(ip)                    # Onyphe
+    results["Pulsedive"] = pulsedive.iocs(ip)            # Pulsedive
     results["Shodan"] = shodanpy.ip(ip)                  # Shodan
     results["Stalkphish"] = stalkphish.ip(ip)            # Stalkphish
     results["Stratosphere IPS"] = strato.ip(ip)          # Stratosphere IPS

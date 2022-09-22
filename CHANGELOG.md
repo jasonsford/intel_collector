@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to intel_collector will be documented here.
 
+## [2.0.1] - 22 September 2022
+### Added
+Support for:
+- BinaryEdge (IPs)
+- LeakIX (IPs)
+- Pulsedive (Domains, IPs)
+
 ## [2.0.0] - 7 September 2022
 ### Added
 Support for:

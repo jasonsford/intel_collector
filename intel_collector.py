@@ -8,7 +8,7 @@
 # their tenant for the presence of indicators within their own environment.
 #
 # github.com/jasonsford
-# 7 September 2022
+# 22 September 2022
 
 # Dependencies for file output
 from datetime import datetime
@@ -18,13 +18,16 @@ import json
 from validate import isValidDomain, isValidFileHash, isValidIpAddress
 
 # Free Resources 
+import binaryedge   # BinaryEdge.io
 import circl        # Circl.lu
 import echotrail    # Echotrail.io
 import filescan     # Filescan.io
 import greynoise    # GreyNoise.io
 import hybrid       # Hybrid Analysis
+import leakix       # LeakIX
 import netlas       # Netlas.io
 import onyphe       # Onyphe
+import pulsedive    # Pulsedive
 import shodanpy     # Shodan
 import stalkphish   # Stalkphish
 import strato       # Stratosphere IPS
@@ -60,6 +63,7 @@ class intel_collector:
             results["Microsoft"] = msde.domain(domain)                  # Microsoft Defender for Endpoint
             results["Netlas"] = netlas.iocs(domain)                     # Netlas.io
             results["Onyphe"] = onyphe.domain(domain)                   # Onyphe
+            results["Pulsedive"] = pulsedive.iocs(domain)               # Pulsedive
             results["Shodan"] = shodanpy.domain(domain)                 # Shodan
             results["Tria.ge"] = triage.iocs(domain,'domain')           # Tria.ge
             results["URLhaus"] = urlhaus.iocs(domain,'host')            # Urlhaus
@@ -96,7 +100,7 @@ class intel_collector:
 
             # Query the appropriate API based on the number of characters in the hash
             if(len(hash) == 32):
-                results["Circl.lu"] = circl.hash(hash,'md5')              # Circl.lu
+                results["Circl.lu"] = circl.hash(hash,'md5')             # Circl.lu
                 results["CrowdStrike"] = crwd.iocs(hash,'md5')           # CrowdStrike Falcon
                 results["Echotrail"] = echotrail.hash(hash)              # Echotrail.io
                 results["Emerging Threats"] = etintel.hash(hash)         # Emerging Threats
@@ -106,7 +110,7 @@ class intel_collector:
                 results["URLhaus"] = urlhaus.iocs(hash,'md5')            # Urlhaus
                 results["VirusTotal"] = virustotal.hash(hash)            # VirusTotal
             if(len(hash) == 40):
-                results["Circl.lu"] = circl.hash(hash,'sha1')             # Circl.lu
+                results["Circl.lu"] = circl.hash(hash,'sha1')            # Circl.lu
                 results["FileScan.io"] = filescan.hash(hash,'sha1')      # Filescan.io
                 results["Hybrid Analysis"] = hybrid.hash(hash)           # Hybrid Analysis
                 results["Microsoft"] = msde.hash(hash)                   # Microsoft Defender for Endpoint            
@@ -155,12 +159,15 @@ class intel_collector:
             # Empty dictionary to store results from API calls
             results = {}
 
+            results["BinaryEdge"] = binaryedge.ip(ip)            # BinaryEdge.io
             results["CrowdStrike"] = crwd.iocs(ip,'ipv4')        # CrowdStrike Falcon
             results["Emerging Threats"] = etintel.ip(ip)         # Emerging Threats
             results["GreyNoise"] = greynoise.ip(ip)              # GreyNoise
+            results["LeakIX"] = leakix.ip(ip)                    # LeakIX
             results["Microsoft"] = msde.ip(ip)                   # Microsoft Defender for Endpoint
             results["Netlas"] = netlas.iocs(ip)                  # Netlas.io
             results["Onyphe"] = onyphe.ip(ip)                    # Onyphe
+            results["Pulsedive"] = pulsedive.iocs(ip)            # Pulsedive
             results["Shodan"] = shodanpy.ip(ip)                  # Shodan
             results["Stalkphish"] = stalkphish.ip(ip)            # Stalkphish
             results["Stratosphere IPS"] = strato.ip(ip)          # Stratosphere IPS
