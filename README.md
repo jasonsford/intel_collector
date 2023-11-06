@@ -241,7 +241,7 @@ go.find_ip('103.161.17.242')
 Pull requests are welcome. For major changes, please open an issue to discuss what you would like to change.
 
 ## Authors
-[Jason Ford](https://jasonsford.com)
+[Jason Ford](http://jasonsford.com)
 
 ## License
 [GPLv3](https://choosealicense.com/licenses/gpl-3.0/)
