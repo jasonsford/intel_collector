@@ -206,4 +206,4 @@ This project is licensed under the [GPLv3 License](https://choosealicense.com/li
 
 **Jason Ford**  
 GitHub: [github.com/jasonsford](https://github.com/jasonsford)  
-LinkedIn: [@JasonFord](https://www.linkedin.com/in/jasonsford/)
+LinkedIn: [JasonSFord](https://www.linkedin.com/in/jasonsford/)
