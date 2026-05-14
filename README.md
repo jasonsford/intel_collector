@@ -1,247 +1,209 @@
-# intel_collector
+# intel_collector 
 
-intel collector is a Python library to query various sources of threat intelligence
-for data on domains, file hashes, and IP addresses. Responses are returned in JSON
-format and written to CSV.
+A consolidated threat intelligence aggregator that queries multiple public and enterprise APIs for domains, IP addresses, and file hashes.
 
-CrowdStrike Falcon and Microsoft Defender for Endpoint customers can also query
-their tenant for the presence of indicators within their own environment.
+## Key Features (v3.0)
+- **Single-File Architecture**: All sources consolidated into one modular script using a registry pattern
+- **Dynamic `.env` Routing**: Sources automatically enable/disable based on API key presence. Leave a key empty to skip that provider
+- **Request Caching**: Built-in `requests-cache` deduplicates identical queries, saves API calls, and speeds up repeated recon runs
+- **Web-Ready API**: Drop-in `get_intel_results()` function for FastAPI/Flask/Starlette backends
+- **Verbose Logging**: Replaced `print()` statements with structured logging. Enable `--verbose` for `DEBUG`-level troubleshooting
+- **Rate Limiting**: Configurable delay between API calls to respect provider limits and avoid throttling
+- **Auto-Validation**: Strict IP, domain, and hash validation using Python's `ipaddress` stdlib and regex
+- **Removed Sources**: BinaryEdge (decommissioned), EchoTrail (decommissioned), Onyphe (paid-only)
 
-## Supported APIs
-### Free Resources
-BinaryEdge (binaryedge.io)
-<br>Circl.lu (hashlookup.circl.lu)
-<br>Echotrail (echotrail.io)
-<br>Filescan.io (filescan.io)
-<br>GreyNoise Community API (api.greynoise.io)
-<br>Hybrid Analysis (hybrid-analysis.com)
-<br>LeakIX (leakix.net)
-<br>Netlas (app.netlas.io)
-<br>Onyphe Free Tier (onyphe.io)
-<br>PulseDive (pulsedive.com)
-<br>Shodan (shodan.io)
-<br>Stalkphish (stalkphish.io)
-<br>Stratosphere IPS (stratosphereips.org)
-<br>Triage (tria.ge)
-<br>Urlhaus (urlhaus-api.abuse.ch)
-<br>Urlscan.io (urlscan.io)
-<br>VirusTotal (virustotal.com)
+---
 
-### Paid Resources
-CrowdStrike Falcon Intel (api.crowdstrike.com)
-<br>Emerging Threats Intelligence (api.emergingthreats.net)
-<br>Microsoft Defender for Endpoint (api.securitycenter.windows.com)
+## Installation & Setup
 
-## Setting API keys
+# Install dependencies
+pip install -r requirements.txt
 
-API keys are set from within the library for each intel source.
-
-```python
-# binaryedge.py (BinaryEdge)
-binaryedge_api_key = 'your binary edge api key'
-
-# crwd.py (CrowdStrike)
-crwd_client_id = 'your crowdstrike api client id'
-crwd_client_secret = 'your crowdstrike api client secret'
-
-# echotrail.py (Echotrail.io)
-echotrail_api_key = 'your echotrail api key'
-
-# etintel.py (Emerging Threats Intelligence)
-etintel_api_key = 'your emerging threats intelligence api key'
-
-# filescan.py (Filescan.io)
-filescan_api_key = 'your filescan.io api key'
-
-# greynoise.py (GreyNoise.io)
-greynoise_api_key = 'your greynoise community api key'
-
-# hybrid.py (Hybrid Analysis)
-hybrid_api_key = 'your hybrid analysis api key'
-
-# leakix.py (LeakIX)
-leakix_api_key = 'your leakix api key'
-
-# msde.py (Microsoft Defender for Endpoint)
-msft_tenant_id = 'your M365 tenant id'
-msft_client_id = 'your M365 client id'
-msft_client_secret = 'your M365 client secret'
-
-# netlas.py (Netlas.io)
-netlas_api_key 'your netlas api key'
-
-# onyphe.py (Onyphe)
-onyphe_api_key = 'your onyphe api key'
-
-# pulsedive.py (Pulsedive)
-pulsedive_api_key = 'your pulsedive api key'
-
-# shodanpy.py (Shodan)
-shodan_api_key = 'your shodan api key'
-
-# stalkphish.py (Stalkphish)
-stalkphish_api_key = 'Token your stalkphish api key'
-
-# triage.py (Tria.ge)
-triage_api_key = 'your tria.ge api key'
-
-# urlscan.py (Urlscan.io)
-urlscan_api_key = 'your urlscan.io api key'
-
-# virustotal.py (VirusTotal)
-virustotal_api_key = 'your virustotal api key'
+# Setup environment configuration
+cp .env.example .env
+# Edit .env with your API keys
 ```
 
-## Disabling Modules
+---
 
-All modules are enabled by default. Modules within each function can be disabled if you don't have an API key or don't wish to utilize them. Add # to the beginning of these lines as needed:     
+## Configuration (`.env`)
 
-```python
+All API keys are managed via a single `.env` file. Sources without configured keys are automatically skipped at runtime.
 
-# Free Resources 
-import binaryedge
-import circl
-import echotrail
-import filescan
-import greynoise
-import hybrid
-import leakix
-import netlas
-import onyphe
-import pulsedive
-import shodanpy
-import stalkphish
-import strato
-import triage
-import urlhaus
-import urlscan
-import virustotal
+| Source | Required `.env` Variables |
+|--------|---------------------------|
+| **Circl.lu** | `CIRCL_API_KEY` |
+| **CrowdStrike** | `CRWD_CLIENT_ID`, `CRWD_CLIENT_SECRET` |
+| **Emerging Threats** | `ETINTEL_API_KEY` |
+| **Filescan.io** | `FILESCAN_API_KEY` |
+| **GreyNoise** | `GREYNOISE_API_KEY` |
+| **Hybrid Analysis** | `HYBRID_API_KEY` |
+| **LeakIX** | `LEAKIX_API_KEY` |
+| **Microsoft Defender** | `MSDE_TENANT_ID`, `MSDE_CLIENT_ID`, `MSDE_CLIENT_SECRET` |
+| **Netlas** | `NETLAS_API_KEY` |
+| **Pulsedive** | `PULSEDIVE_API_KEY` |
+| **Shodan** | `SHODAN_API_KEY` |
+| **Stalkphish** | `STALKPHISH_API_KEY` |
+| **Stratosphere IPS** | *(No key required)* |
+| **Triage** | `TRIAGE_API_KEY` |
+| **URLhaus** | `URLHAUS_API_KEY` |
+| **URLScan** | `URLSCAN_API_KEY` |
+| **VirusTotal** | `VIRUSTOTAL_API_KEY` |
 
-# Paid Resources
-import crwd
-import msde
-import etintel
-
-find_domain
-
-    results["Emerging Threats"] = etintel.domain(domain)        # Emerging Threats
-    results["Microsoft"] = msde.domain(domain)                  # Microsoft Defender for Endpoint
-    results["Netlas"] = netlas.iocs(domain)                     # Netlas.io
-    results["Onyphe"] = onyphe.domain(domain)                   # Onyphe
-    results["Pulsedive"] = pulsedive.iocs(domain)               # Pulsedive
-    results["Shodan"] = shodanpy.domain(domain)                 # Shodan
-    results["Tria.ge"] = triage.iocs(domain,'domain')           # Tria.ge
-    results["URLhaus"] = urlhaus.iocs(domain,'host')            # Urlhaus
-    results["URLScan"] = urlscan.domain(domain)                 # Urlscan.io
-    results["VirusTotal"] = virustotal.domain(domain)           # VirusTotal
-
-find_hash
-
-    results["Circl.lu"] = circl.hash(hash,'md5')         # Circl.lu
-    results["CrowdStrike"] = crwd.iocs(hash,'md5')       # CrowdStrike Falcon
-    results["Echotrail"] = echotrail.hash(hash)          # Echotrail.io
-    results["Emerging Threats"] = etintel.hash(hash)     # Emerging Threats
-    results["FileScan.io"] = filescan.hash(hash,'md5')   # Filescan.io
-    results["Hybrid Analysis"] = hybrid.hash(hash)       # Hybrid Analysis
-    results["Microsoft"] = msde.hash(hash)               # Microsoft Defender for Endpoint            
-    results["Tria.ge"] = triage.iocs(hash,'sha1')        # Tria.ge
-    results["URLhaus"] = urlhaus.iocs(hash,'sha256')     # Urlhaus
-    results["URLScan"] = urlscan.hash(hash)              # Urlscan.io
-    results["VirusTotal"] = virustotal.hash(hash)        # VirusTotal
-
-find_ip
-
-    results["BinaryEdge"] = binaryedge.ip(ip)            # BinaryEdge.io
-    results["CrowdStrike"] = crwd.iocs(ip,'ipv4')        # CrowdStrike Falcon
-    results["Emerging Threats"] = etintel.ip(ip)         # Emerging Threats
-    results["GreyNoise"] = greynoise.ip(ip)              # GreyNoise
-    results["LeakIX"] = leakix.ip(ip)                    # LeakIX
-    results["Microsoft"] = msde.ip(ip)                   # Microsoft Defender for Endpoint
-    results["Netlas"] = netlas.iocs(ip)                  # Netlas.io
-    results["Onyphe"] = onyphe.ip(ip)                    # Onyphe
-    results["Pulsedive"] = pulsedive.iocs(ip)            # Pulsedive
-    results["Shodan"] = shodanpy.ip(ip)                  # Shodan
-    results["Stalkphish"] = stalkphish.ip(ip)            # Stalkphish
-    results["Stratosphere IPS"] = strato.ip(ip)          # Stratosphere IPS
-    results["Tria.ge"] = triage.iocs(ip,'ip')            # Tria.ge
-    results["URLhaus"] = urlhaus.iocs(ip,'host')         # Urlhaus
-    results["URLScan"] = urlscan.ip(ip)                  # Urlscan.io
-    results["VirusTotal"] = virustotal.ip(ip)            # VirusTotal
-```
+---
 
 ## Usage
-    
-```python
-# Import the library
-from intel_collector import intel_collector
 
-# Initialize client API keys and base URLs  
-go = intel_collector()
+### Command Line Interface
 
-# Get information on a domain
-go.find_domain('bkdata.vn')
-
-# Get information on an IP address
-go.find_ip('103.161.17.242')
-
-# Get information on a file hash
-go.find_hash('870c31aa344b2950d0ea4849a472dafed312ecee8aa212c47bf543668bbee8e9')
-go.find_hash('1e5bc9d7e413ddd7902c2932e418702b84d0cc07')
-go.find_hash('177f3c8a2623d4efb41b0020d680be83')
-```
-### Helpful hints for searching file hashes:
-
-- The Circl.lu API supports the following indicator types (md5, sha1, sha256)
-- The Crowdstrike Falcon API for custom IOCs supports the following indicator types (md5, sha256)
-- The Echotrail API supports the following indicator types (md5, sha256)
-- The ET Intel API supports the (md5) indicator type
-- The Filescan.io API supports the following indicator types (md5, sha1, sha256)
-- The Hybrid Analysis API supports the following indicator types (md5, sha1, sha256)
-- The Microsoft Defender for Endpoint API supports the following indicator types (sha1, sha256)
-- The Tria.ge API supports the following indicator types (md5, sha1, sha256, sha512)
-- The Urlhaus API supports the following indicator types (md5, sha256)
-- The Urlscan.io API supports the (sha256) indicator type
-- The VirusTotal API supports the following indicator types (md5, sha1, shad256)
-
-## Sample Output
- ```python   
-go.find_domain('bkdata.vn')
-```
 ```bash
-    Found in Microsoft Defender for Endpoint - Domains
-    Found in Netlas.io
-    Found in Onyphe
-    Found in Shodan
+# Query an IP address
+python intel_collector.py 103.161.17.242 -t ip
 
+# Query a domain (JSON output, limit to specific sources)
+python intel_collector.py example.com -t domain --source Shodan VirusTotal
+
+# CSV output with custom delay and verbose logging
+python intel_collector.py 870c31aa344b2950d0ea4849a472dafed312ecee8aa212c47bf543668bbee8e9 \
+  -t hash --format csv --delay 1.0 --verbose --output-dir ./reports
+
+# Disable file saving (stdout only)
+python intel_collector.py malware.com -t domain --no-save
 ```
+
+**CLI Arguments:**
+| Flag | Description |
+|------|-------------|
+| `indicator` | Domain, IP, or SHA256/MD5/SHA1 hash |
+| `-t, --type` | Force `domain`, `ip`, or `hash` |
+| `-f, --format` | Output format: `json` (default) or `csv` |
+| `-s, --source` | Limit to specific providers (space-separated) |
+| `-o, --output-dir` | Directory for saved reports |
+| `--no-save` | Skip file output, print to stdout only |
+| `-d, --delay` | Rate limit delay between sources (seconds) |
+| `-v, --verbose` | Enable DEBUG-level logging |
+
+---
+
+### Python API
+
 ```python
-go.find_hash('870c31aa344b2950d0ea4849a472dafed312ecee8aa212c47bf543668bbee8e9')
+from intel_collector import IntelCollector
+
+# Initialize collector with custom settings
+collector = IntelCollector(
+    output_dir="./reports",
+    rate_limit_delay=0.5,
+    verbose=False
+)
+
+# Run query (auto-detects indicator type)
+result = collector.find("103.161.17.242", sources=["GreyNoise", "Shodan"], save_file=True)
+
+# Access structured data
+print(f"Queried: {result.sources_queried}")
+print(f"Found in: {list(result.results.keys())}")
 ```
-```bash
-    Response from Echotrail.io
-    Found in Filescan.io
-    Found in Hybrid Analysis
-    Found in Microsoft Defender for Endpoint - Global File Stats
-    Found in Tria.ge
-    Found in VirusTotal - Files
-```
+
+---
+
+### Web Integration (FastAPI Example)
+
+The built-in `get_intel_results()` function returns a strictly JSON-serializable dictionary, making it trivial to integrate with any web framework:
+
 ```python
-go.find_ip('103.161.17.242')
+from fastapi import FastAPI
+from intel_collector import get_intel_results
+
+app = FastAPI()
+
+@app.get("/intel/{indicator}")
+def lookup_indicator(indicator: str, indicator_type: str = None, source: str = None):
+    sources = source.split(",") if source else None
+    return get_intel_results(indicator, indicator_type=indicator_type, sources=sources, save=False)
 ```
-```bash
-    Found in Emerging Threats - Events
-    Response from GreyNoise
-    Found in Microsoft Defender for Endpoint - IP Stats
-    Found in Onyphe
-    Found in Shodan
-    Found in Stalkphish
-    Response from URLscan.io
+
+**Response Format:**
+```json
+{
+  "query_type": "ip",
+  "query_value": "103.161.17.242",
+  "timestamp": "2026-05-13T17:22:59.123456+00:00",
+  "sources_queried": ["GreyNoise", "Shodan", "VirusTotal"],
+  "results": {
+    "GreyNoise": { "ip": "...", "noise": false },
+    "VirusTotal": { "data": { "attributes": { ... } } }
+  },
+  "output_path": "./reports/103_161_17_242_20260513_172259.json"
+}
 ```
+
+---
+
+## 📊 Supported Sources & Capabilities
+
+| Source | Domains | IPs | Hashes | Auth Required |
+|--------|---------|-----|--------|---------------|
+| **Circl.lu** | ❌ | ❌ | ✅ | None |
+| **CrowdStrike** | ❌ | ✅ | ✅ | `CRWD_*` |
+| **Emerging Threats** | ✅ | ✅ | ✅ | `ETINTEL_API_KEY` |
+| **Filescan.io** | ❌ | ❌ | ✅ | `FILESCAN_API_KEY` |
+| **GreyNoise** | ❌ | ✅ | ❌ | `GREYNOISE_API_KEY` |
+| **Hybrid Analysis** | ❌ | ❌ | ✅ | `HYBRID_API_KEY` |
+| **LeakIX** | ❌ | ✅ | ❌ | `LEAKIX_API_KEY` |
+| **Microsoft Defender** | ✅ | ✅ | ✅ | `MSDE_*` |
+| **Netlas** | ✅ | ✅ | ❌ | `NETLAS_API_KEY` |
+| **Pulsedive** | ✅ | ✅ | ✅ | `PULSEDIVE_API_KEY` |
+| **Shodan** | ✅ | ✅ | ❌ | `SHODAN_API_KEY` |
+| **Stalkphish** | ❌ | ✅ | ❌ | `STALKPHISH_API_KEY` |
+| **Stratosphere IPS** | ❌ | ✅ | ❌ | None |
+| **Triage** | ✅ | ✅ | ✅ | `TRIAGE_API_KEY` |
+| **URLhaus** | ✅ | ❌ | ❌ | `URLHAUS_API_KEY` |
+| **URLScan** | ✅ | ✅ | ✅ | `URLSCAN_API_KEY` |
+| **VirusTotal** | ✅ | ✅ | ✅ | `VIRUSTOTAL_API_KEY` |
+
+---
+
+## Output & Logging
+
+- **File Output**: Timestamped `.json` or `.csv` files saved to `output_dir/`
+- **Console Output**: Structured logging with timestamps and severity levels
+  ```
+  2026-05-13 17:22:59 [INFO] intel_collector: → GreyNoise
+  2026-05-13 17:22:59 [INFO] intel_collector: Warning: GreyNoise returned no data
+  2026-05-13 17:22:59 [ERROR] intel_collector: Shodan unexpected error: ConnectionError
+  2026-05-13 17:22:59 [INFO] intel_collector: Results saved to ./reports/103_161_17_242_20260513_172259.json
+  ```
+- **Caching**: `requests-cache` stores successful responses for 1 hour. Identical queries hit the cache instead of the network.
+
+---
+
+## Configuration & Modularity
+
+- **Dynamic Source Routing**: The `SOURCES_REGISTRY` dict drives execution. Add new providers by defining a query function and appending to the registry.
+- **Selective Execution**: Use `--source Shodan VirusTotal` or pass `sources=["Shodan", "VirusTotal"]` to limit scope.
+- **Graceful Degradation**: Network failures, API rate limits, or missing keys are caught per-source. Other providers continue executing.
+- **Extensible**: Designed for easy addition of new intelligence feeds following the established pattern.
+
+---
+
 ## Contributing
-Pull requests are welcome. For major changes, please open an issue to discuss what you would like to change.
 
-## Authors
-[Jason Ford](http://jasonsford.com)
+Contributions are welcome! Please ensure:
+1. New sources follow the existing function signature: `def <source>_query(indicator: str, indicator_type: str = None) -> Optional[Dict]`
+2. All requests use `requests.Session()` with `timeout=10`
+3. Add entries to `SOURCES_REGISTRY` with correct `env_keys` and `types`
+
+---
 
 ## License
-[GPLv3](https://choosealicense.com/licenses/gpl-3.0/)
+
+This project is licensed under the [GPLv3 License](https://choosealicense.com/licenses/gpl-3.0/).
+
+---
+
+## Author
+
+**Jason Ford**  
+GitHub: [github.com/jasonsford](https://github.com/jasonsford)  
+LinkedIn: [@JasonFord](https://www.linkedin.com/in/jasonsford/)
