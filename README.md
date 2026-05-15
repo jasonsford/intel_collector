@@ -16,17 +16,10 @@ A consolidated threat intelligence aggregator that queries multiple public and e
 
 ## Installation & Setup
 
-# Install dependencies
+### Install dependencies
 pip install -r requirements.txt
 
-# Setup environment configuration
-cp .env.example .env
-# Edit .env with your API keys
-```
-
----
-
-## Configuration (`.env`)
+### Configuration (`.env`)
 
 All API keys are managed via a single `.env` file. Sources without configured keys are automatically skipped at runtime.
 
